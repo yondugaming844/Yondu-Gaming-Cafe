@@ -27,7 +27,7 @@ h2{font-size:17px;font-weight:700;margin-bottom:6px;color:var(--txt)}
 .btn.green{background:var(--green);color:#fff}
 .btn.outline{background:transparent;color:var(--txt);border:1px solid var(--border)}
 .btn.danger{background:var(--red);color:#fff}
-.btn.sm{padding:8px 14px;font-size:13px;width:auto;border-radius:6px}
+.btn.sm{padding:8px 14px;font-size:13px;width:auto;border-radius:6px;display:inline-block}
 input,select,textarea{width:100%;background:var(--card2);border:1px solid var(--border);color:var(--txt);padding:12px 14px;border-radius:8px;font-size:15px;font-weight:500;margin-bottom:10px;font-family:inherit}
 input:focus{outline:none;border-color:var(--gold)}
 input::placeholder{color:#5a6273}
@@ -119,6 +119,11 @@ try { sb = window.supabase.createClient(SB_URL, SB_KEY); } catch(e) { console.er
 var RR = 20, POINTS_MAX = 10000, POINTS_PER_HOUR = 1000, REF_BONUS = 50, BDAY_BONUS = 100;
 var YEARS_MS = 365*24*60*60*1000;
 
+/* ============================================================
+   EDIT THIS: your real café phone number
+   ============================================================ */
+var CAFE_PHONE = "+91 90000 00000";
+
 var STA_DEF = [
   { id: "ps5-1", name: "PS5 · 1" },
   { id: "ps5-2", name: "PS5 · 2" },
@@ -151,13 +156,14 @@ var ADD_DEF = [
 var CAFE_INFO = {
   hours: "Mon-Sun · 10:00 AM - 11:00 PM",
   address: "Vadodara, Gujarat",
-  phone: "+91 XXXX XXX XXX"
+  phone: CAFE_PHONE
 };
 
 var CUST = [], SESS = [], TOURN = [], REQ = [], STA = [], EXP = [], ADD = [];
 var curR = "";
 var bk = null;
 var sc = {};
+var signupPic = "";
 
 function hashPin(p) {
   var h = 5381, s = "ysalt" + p + "ysalt";
@@ -166,26 +172,31 @@ function hashPin(p) {
 }
 function checkPin(p, h) { return hashPin(p) === h; }
 
-function resizeImage(file, maxSize) {
-  return new Promise(function(resolve, reject) {
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      var img = new Image();
-      img.onload = function() {
-        var w = img.width, h = img.height;
-        if (w > h) { if (w > maxSize) { h = Math.round(h * maxSize / w); w = maxSize; } }
-        else { if (h > maxSize) { w = Math.round(w * maxSize / h); h = maxSize; } }
-        var c = document.createElement("canvas");
-        c.width = w; c.height = h;
-        c.getContext("2d").drawImage(img, 0, 0, w, h);
-        resolve(c.toDataURL("image/jpeg", 0.7));
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
+/* Read an image file, resize to max 256px, return compressed JPEG data URL */
+function readImageFile(file, cb) {
+  if (!file) return cb(null);
+  if (!file.type || file.type.indexOf("image/") !== 0) { alert("Please choose an image file"); return cb(null); }
+  if (file.size > 5 * 1024 * 1024) { alert("Image too large (max 5MB)"); return cb(null); }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var max = 256;
+      var w = img.width, h = img.height;
+      if (w >= h && w > max) { h = Math.round(h * max / w); w = max; }
+      else if (h > w && h > max) { w = Math.round(w * max / h); h = max; }
+      var cvs = document.createElement("canvas");
+      cvs.width = w; cvs.height = h;
+      var ctx = cvs.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+      try { cb(cvs.toDataURL("image/jpeg", 0.8)); }
+      catch(err) { console.error(err); cb(null); }
     };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+    img.onerror = function() { alert("Could not read image"); cb(null); };
+    img.src = e.target.result;
+  };
+  reader.onerror = function() { alert("Could not read file"); cb(null); };
+  reader.readAsDataURL(file);
 }
 
 function fmtTime(t) {
@@ -196,7 +207,6 @@ function fmtTime(t) {
   var h12 = hh % 12 || 12;
   return h12 + ":" + p[1] + " " + ap;
 }
-
 function getGR() { return localStorage.getItem("yondu_google_review") || "https://g.page"; }
 function getIG() { return localStorage.getItem("yondu_instagram") || "https://instagram.com/yondugamingcafe"; }
 
@@ -305,14 +315,10 @@ function syncTable(table, newArr, oldArr, denorm) {
   newArr.forEach(function(x) { newIds[x.id] = true; });
   var toDel = oldArr.filter(function(x) { return !newIds[x.id]; }).map(function(x) { return x.id; });
   if (toUpsert.length) {
-    sb.from(table).upsert(toUpsert).then(function(res) {
-      if (res.error) console.error("upsert " + table, res.error);
-    }).catch(function(e) { console.error(e); });
+    sb.from(table).upsert(toUpsert).then(function(res) { if (res.error) console.error(res.error); }).catch(function(e) { console.error(e); });
   }
   if (toDel.length) {
-    sb.from(table).delete().in("id", toDel).then(function(res) {
-      if (res.error) console.error("delete " + table, res.error);
-    }).catch(function(e) { console.error(e); });
+    sb.from(table).delete().in("id", toDel).then(function(res) { if (res.error) console.error(res.error); }).catch(function(e) { console.error(e); });
   }
 }
 
@@ -336,6 +342,8 @@ function loadAll() {
     sb.from("addons").select("*"),
     sb.from("requests").select("*").order("created_at", { ascending: false }).limit(300)
   ]).then(function(results) {
+    var errs = results.filter(function(r){ return r && r.error; });
+    if (errs.length) console.error("Supabase errors:", errs.map(function(e){ return e.error; }));
     CUST = (results[0].data || []).map(normC);
     SESS = (results[1].data || []).map(normS);
     TOURN = (results[2].data || []).map(normT);
@@ -393,7 +401,6 @@ function signOut() { DB.del("yondu_current_customer"); DB.del("yondu_guest_mode"
 function isGuest() { return !curC() && DB.get("yondu_guest_mode", false); }
 function setGuest() { DB.set("yondu_guest_mode", true); }
 
-function ptsFor(amt) { return Math.floor(amt / RR); }
 function newCID() {
   for (var i = 0; i < 200; i++) {
     var id = String(Math.floor(100000 + Math.random() * 900000));
@@ -430,7 +437,6 @@ var BADGES = [
   { id: "ref", em: "🤝", name: "Referrer", check: function(c) { return (c.referrals || 0) >= 1; } },
   { id: "loyal", em: "👑", name: "Loyalty", check: function(c) { return c.visits >= 25; } }
 ];
-
 function unlockedBadges(c) {
   return BADGES.filter(function(b) { try { return b.check(c); } catch(e) { return false; } });
 }
@@ -450,11 +456,18 @@ function awardBday(c) {
 }
 
 var R = {};
+
+/* ---- ROUTER ---- */
+var PUBLIC_ROUTES = { landing: 1, signin: 1, signup: 1, login: 1 };
+
 function go(r, p) { curR = r; window.scrollTo(0, 0); render(r, p || {}); }
+window.go = go;
+
 function render(r, p) {
   var c = curC();
-  if (c && !c.activated && r !== "pending" && r !== "login" && r !== "signup" && r !== "landing") { r = "pending"; p = {}; }
-  if (!c && !isGuest() && r !== "landing" && r !== "login" && r !== "signup") { r = "landing"; p = {}; }
+  if (c && !c.activated && r !== "pending" && !PUBLIC_ROUTES[r]) { r = "pending"; p = {}; }
+  if (!c && !isGuest() && !PUBLIC_ROUTES[r]) { r = "landing"; p = {}; }
+  curR = r;
   var app = document.getElementById("app");
   var fn = R[r] || R.landing;
   if (app) app.innerHTML = fn(p);
@@ -464,9 +477,7 @@ function render(r, p) {
 function renderNav(r) {
   var nav = document.getElementById("nav");
   var c = curC();
-  if (r === "liveT" || r === "landing" || r === "login" || r === "signup" || r === "pending") {
-    nav.style.display = "none"; return;
-  }
+  if (r === "liveT" || r === "landing" || r === "signin" || r === "login" || r === "signup" || r === "pending") { nav.style.display = "none"; return; }
   if (!c || !c.activated) { nav.style.display = "none"; return; }
   nav.style.display = "flex";
   nav.innerHTML =
@@ -500,7 +511,6 @@ R.landing = function() {
     '<div style="text-align:center;color:var(--muted);font-size:11px;margin-top:24px;line-height:1.8">' + CAFE_INFO.hours + '<br>' + CAFE_INFO.address + '</div>' +
   '</div></div>';
 };
-
 window.guestEnter = function() { setGuest(); go("guest_home"); };
 
 R.guest_home = function() {
@@ -572,10 +582,22 @@ window.doSignin = function() {
   go("home");
 };
 
+/* ===================== SIGNUP with PHOTO ===================== */
 R.signup = function() {
+  var av = signupPic
+    ? '<div class="avatar avatar-lg" style="background-image:url(\'' + signupPic + '\');margin:0 auto"></div>'
+    : '<div class="avatar avatar-lg" style="margin:0 auto;font-size:34px">📷</div>';
+  var hint = signupPic
+    ? 'Tap to change · <span onclick="clearSignupPic()" style="color:var(--red);font-weight:700">remove</span>'
+    : 'Tap to add photo <span style="opacity:.7">(optional)</span>';
   return '<div class="screen"><div class="wrap" style="max-width:440px;margin:30px auto">' +
     '<a href="javascript:go(\'landing\')" style="color:var(--muted);font-weight:600;font-size:13px">← Back</a>' +
     '<h1 style="margin-top:20px">Create Account</h1><p class="sub">One account per person</p>' +
+    '<div style="text-align:center;margin:6px 0 18px">' +
+      '<div onclick="pickSignupPic()" style="display:inline-block;cursor:pointer">' + av + '</div>' +
+      '<div style="color:var(--muted);font-size:12px;margin-top:8px">' + hint + '</div>' +
+      '<input type="file" id="signupPicInput" accept="image/*" style="display:none" onchange="handleSignupPic(this)">' +
+    '</div>' +
     '<label>Your Name</label><input id="sn" placeholder="e.g. Arjun" maxlength="30">' +
     '<div style="font-size:11px;color:var(--muted);margin:-6px 0 10px;line-height:1.5">At least 3 letters · must be unique</div>' +
     '<label>Birthday</label><input id="sb" type="date">' +
@@ -585,6 +607,19 @@ R.signup = function() {
     '<button class="btn" style="margin-top:12px" onclick="doSignup()">Create Account</button>' +
   '</div></div>';
 };
+
+window.pickSignupPic = function() {
+  var el = document.getElementById("signupPicInput");
+  if (el) el.click();
+};
+window.handleSignupPic = function(inp) {
+  var f = inp.files && inp.files[0];
+  readImageFile(f, function(dataUrl) {
+    if (dataUrl) { signupPic = dataUrl; render("signup", {}); }
+    else { inp.value = ""; }
+  });
+};
+window.clearSignupPic = function() { signupPic = ""; render("signup", {}); };
 
 window.doSignup = function() {
   var n = document.getElementById("sn").value.trim();
@@ -605,13 +640,12 @@ window.doSignup = function() {
     var rf = all.find(function(x) { return x.id.toUpperCase() === r; });
     if (rf) { refId = rf.id; refB = REF_BONUS; }
   }
-
   var c = {
     id: newCID(), name: n, phone: "", birthday: b || "", pinHash: hashPin(p1),
     points: refB, pointsSpent: 0, ps5Hours: 0, raceHours: 0,
     totalSpent: 0, visits: 0, createdAt: Date.now(),
     activated: false, vip: false, banned: false,
-    profilePic: "", credit: 60, creditUsed: false,
+    profilePic: signupPic || "", credit: 60, creditUsed: false,
     referrals: 0, referredBy: refId, birthdayAwarded: 0,
     lastActivity: Date.now(), pointsExpiredAt: 0
   };
@@ -626,6 +660,7 @@ window.doSignup = function() {
   saveC(all);
   setCur(c.id);
   DB.del("yondu_guest_mode");
+  signupPic = "";
   go("pending");
 };
 
@@ -633,10 +668,13 @@ R.pending = function() {
   var c = curC();
   if (!c) return R.landing();
   if (c.activated) { setTimeout(function() { go("home"); }, 100); return '<div class="screen"><div class="wrap"><div class="empty"><div class="big">✓</div><div class="msg">LOADING</div></div></div></div>'; }
+  var av = c.profilePic
+    ? '<div class="avatar avatar-lg" style="background-image:url(\'' + c.profilePic + '\');margin:0 auto"></div>'
+    : '<div class="avatar avatar-lg" style="margin:0 auto">' + c.name.charAt(0).toUpperCase() + '</div>';
   return '<div class="screen"><div class="wrap" style="max-width:480px">' +
-    '<div style="text-align:center;margin:30px 0 20px">' +
-      '<div style="font-size:56px;margin-bottom:10px">⏳</div>' +
-      '<h1 style="font-size:22px;text-align:center">Hi, ' + c.name + '!</h1>' +
+    '<div style="text-align:center;margin:20px 0 16px">' +
+      av +
+      '<h1 style="font-size:22px;text-align:center;margin-top:14px">Hi, ' + c.name + '!</h1>' +
       '<p style="color:var(--muted);font-size:14px;margin-top:6px">Waiting for activation</p>' +
     '</div>' +
     '<div class="id-card"><div class="label">YOUR YONDU NUMBER</div><div class="idnum">' + c.id + '</div><div class="hint">Show at counter</div></div>' +
@@ -712,6 +750,10 @@ R.profile = function() {
   var av = c.profilePic
     ? '<div class="avatar avatar-lg" style="background-image:url(\'' + c.profilePic + '\');margin:0 auto"></div>'
     : '<div class="avatar avatar-lg" style="margin:0 auto">' + c.name.charAt(0).toUpperCase() + '</div>';
+  var photoBtns = '<div style="margin-top:10px">' +
+      '<button class="btn sm dark" onclick="changePhoto()" style="margin:0 4px">📷 ' + (c.profilePic ? "Change" : "Add") + ' Photo</button>' +
+      (c.profilePic ? '<button class="btn sm dark" onclick="removePhoto()" style="margin:0 4px;color:var(--red)">Remove</button>' : '') +
+    '</div>';
   var badges = BADGES.map(function(b) {
     var has = ub.find(function(u) { return u.id === b.id; });
     return '<div class="badge-item ' + (has ? "unlocked" : "locked") + '"><span class="em">' + b.em + '</span><div class="nm">' + b.name + '</div></div>';
@@ -719,7 +761,7 @@ R.profile = function() {
   return '<div class="screen"><div class="wrap">' +
     '<a href="javascript:go(\'home\')" style="color:var(--muted);font-weight:600;font-size:13px">← Home</a>' +
     '<h1 style="margin-top:20px">My Account</h1><p class="sub">' + (c.vip ? "⭐ VIP · " : "") + 'Member since ' + new Date(c.createdAt).toLocaleDateString("en-IN", { month: "short", year: "numeric" }) + '</p>' +
-    '<div style="text-align:center;margin:14px 0">' + av + '</div>' +
+    '<div style="text-align:center;margin:14px 0">' + av + photoBtns + '</div>' +
     '<div class="id-card" style="padding:22px"><div class="label">YOUR YONDU NUMBER</div><div class="idnum" style="font-size:32px">' + c.id + '</div></div>' +
     '<div class="pts-hero" style="margin-top:14px"><div class="lbl">REWARD POINTS</div><div class="val">' + pts + '</div><div class="sub">' + (Math.floor(pts / POINTS_PER_HOUR) > 0 ? Math.floor(pts / POINTS_PER_HOUR) + " free hour available" : "Earn more for free hours") + '</div></div>' +
     '<div class="notice" style="margin-top:14px"><b>📊 Points:</b><br>• ₹' + RR + ' = 1 point<br>• ' + POINTS_PER_HOUR + ' points = 1 free hour<br>• Max ' + POINTS_MAX.toLocaleString() + '</div>' +
@@ -748,6 +790,41 @@ R.profile = function() {
     '<button class="btn dark" style="margin-top:8px" onclick="editName()">✏️ Change Name</button>' +
     '<button class="btn danger" style="margin-top:8px" onclick="signOut()">Sign Out</button>' +
   '</div></div>';
+};
+
+/* ---- Profile photo change / remove ---- */
+window.changePhoto = function() {
+  var inp = document.createElement("input");
+  inp.type = "file";
+  inp.accept = "image/*";
+  inp.onchange = function() {
+    var f = inp.files && inp.files[0];
+    readImageFile(f, function(dataUrl) {
+      if (!dataUrl) return;
+      var c = curC();
+      if (!c) return;
+      c.profilePic = dataUrl;
+      var a = CUST.slice();
+      var i = a.findIndex(function(x) { return x.id === c.id; });
+      if (i >= 0) a[i] = c;
+      saveC(a);
+      alert("✅ Photo updated!");
+      render("profile", {});
+    });
+  };
+  inp.click();
+};
+
+window.removePhoto = function() {
+  var c = curC();
+  if (!c) return;
+  if (!confirm("Remove profile photo?")) return;
+  c.profilePic = "";
+  var a = CUST.slice();
+  var i = a.findIndex(function(x) { return x.id === c.id; });
+  if (i >= 0) a[i] = c;
+  saveC(a);
+  render("profile", {});
 };
 
 window.shareRef = function() {
@@ -933,7 +1010,6 @@ R.snacks = function() {
     items +
   '</div></div>' + sticky;
 };
-
 window.addS = function(id) { sc[id] = (sc[id] || 0) + 1; render("snacks", {}); };
 window.remS = function(id) { if (sc[id]) sc[id]--; if (sc[id] <= 0) delete sc[id]; render("snacks", {}); };
 
@@ -1033,11 +1109,6 @@ R.detail = function(p) {
   var f = players.length;
   var full = f >= (t.maxPlayers || 16);
   var dt = new Date(t.date + "T" + t.time);
-  var ml = Math.max(0, dt - Date.now());
-  var dl = Math.floor(ml / 86400000);
-  var hl = Math.floor((ml % 86400000) / 3600000);
-  var mil = Math.floor((ml % 3600000) / 60000);
-  var cd = t.status === "done" ? "Finished" : t.status === "live" ? "● LIVE" : ml <= 0 ? "Starting" : dl > 0 ? dl + "d " + hl + "h" : hl + "h " + mil + "m";
   var c = curC();
   var already = c && players.find(function(pl) { return pl.customerId === c.id; });
   var prizes = [
@@ -1074,17 +1145,11 @@ R.detail = function(p) {
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px">' +
           '<div style="background:rgba(201,169,97,.1);padding:10px;border-radius:8px;text-align:center"><div style="font-size:10px;color:var(--gold);font-weight:700">DATE</div><div style="font-size:14px;font-weight:700;color:var(--txt);margin-top:4px">' + dt.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) + '</div></div>' +
           '<div style="background:rgba(34,211,238,.1);padding:10px;border-radius:8px;text-align:center"><div style="font-size:10px;color:var(--cyan);font-weight:700">TIME</div><div style="font-size:14px;font-weight:700;color:var(--txt);margin-top:4px">' + fmtTime(t.time) + '</div></div>' +
-          '<div style="background:rgba(34,211,238,.1);padding:10px;border-radius:8px;text-align:center"><div style="font-size:10px;color:var(--cyan);font-weight:700">SLOTS</div><div style="font-size:14px;font-weight:700;color:var(--txt);margin-top:4px">' + f + '/' + (t.maxPlayers || 16) + '</div></div>' +
-          '<div style="background:rgba(236,72,153,.1);padding:10px;border-radius:8px;text-align:center"><div style="font-size:10px;color:var(--pink);font-weight:700">STARTS</div><div style="font-size:14px;font-weight:700;color:var(--txt);margin-top:4px">' + cd + '</div></div>' +
         '</div>' +
       '</div>' +
     '</div>' +
     prizeHTML +
-    '<div class="card"><h2>📜 Rules</h2><div style="font-size:13px;line-height:1.7;color:#cbd5e1;white-space:pre-line;margin-top:8px">' + (t.rules || "• No cheating\n• Be on time") + '</div></div>' +
-    '<div class="card"><h2>👥 Players (' + f + '/' + (t.maxPlayers || 16) + ')</h2>' +
-      '<div class="progress" style="margin:12px 0"><div style="width:' + Math.round(f / (t.maxPlayers || 16) * 100) + '%"></div></div>' +
-      playerHTML +
-    '</div>' +
+    '<div class="card"><h2>👥 Players (' + f + '/' + (t.maxPlayers || 16) + ')</h2><div class="progress" style="margin:12px 0"><div style="width:' + Math.round(f / (t.maxPlayers || 16) * 100) + '%"></div></div>' + playerHTML + '</div>' +
   '</div></div>' + action;
 };
 
@@ -1133,7 +1198,6 @@ R.ticket = function(p) {
   if (!t) return R.tournaments();
   var pl = (t.players || []).find(function(x) { return x.id === p.pid; });
   if (!pl) return R.tournaments();
-  var dt = new Date(t.date + "T" + t.time);
   return '<div class="screen"><div class="wrap" style="max-width:460px">' +
     '<div class="t-hero" style="border-radius:12px;padding:22px">' +
       (t.bannerPic ? '<img src="' + t.bannerPic + '" style="width:100%;height:100px;object-fit:cover;border-radius:8px">' : '<div style="font-size:40px">' + (t.banner || "🎫") + '</div>') +
@@ -1141,13 +1205,8 @@ R.ticket = function(p) {
       '<div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--txt)">' + t.name + '</div>' +
     '</div>' +
     '<div class="id-card" style="margin-top:14px;padding:28px 20px">' +
-      '<div class="label">YOUR NUMBER</div>' +
-      '<div class="idnum" style="font-size:70px;letter-spacing:8px">' + pl.id + '</div>' +
+      '<div class="label">YOUR NUMBER</div><div class="idnum" style="font-size:70px;letter-spacing:8px">' + pl.id + '</div>' +
       '<div class="hint" style="color:var(--gold-bright);font-weight:700;margin-top:10px">' + pl.name + '</div>' +
-    '</div>' +
-    '<div class="card" style="margin-top:12px">' +
-      '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span style="color:var(--muted);font-size:12px">Date</span><b>' + dt.toLocaleDateString("en-IN") + '</b></div>' +
-      '<div style="display:flex;justify-content:space-between;padding:6px 0"><span style="color:var(--muted);font-size:12px">Time</span><b>' + fmtTime(t.time) + '</b></div>' +
     '</div>' +
     '<div class="notice gold">💵 Pay entry at counter</div>' +
     '<button class="btn dark" onclick="go(\'tournaments\')">← Back</button>' +
@@ -1159,14 +1218,7 @@ R.session = function(p) {
   if (!s) return '<div class="screen"><div class="wrap"><h2>Not found</h2></div></div>';
   var playHTML = "";
   if (s.status === "playing") {
-    var extra = "";
-    if (!s.isMembership) {
-      var tiles = [30, 60, 120].map(function(m) {
-        return '<div class="tile" onclick="reqMore(\'' + s.id + '\',' + m + ')"><div class="t">+' + (m < 60 ? m + "m" : m / 60 + "h") + '</div></div>';
-      }).join("");
-      extra = '<div class="sec-label">Need more time?</div><div class="grid3">' + tiles + '</div>';
-    }
-    playHTML = '<div class="card" style="text-align:center;padding:22px"><div style="color:var(--gold);font-size:11px;letter-spacing:2px;font-weight:700">' + (s.isMembership ? "MEMBERSHIP · TIME PLAYED" : "TIME REMAINING") + '</div><div class="timer-huge" id="stimer">--:--</div></div>' + extra;
+    playHTML = '<div class="card" style="text-align:center;padding:22px"><div style="color:var(--gold);font-size:11px;letter-spacing:2px;font-weight:700">' + (s.isMembership ? "MEMBERSHIP · TIME PLAYED" : "TIME REMAINING") + '</div><div class="timer-huge" id="stimer">--:--</div></div>';
   } else {
     playHTML = '<div class="notice">Status: ' + s.status + '</div>';
   }
@@ -1199,21 +1251,21 @@ R.session.after = function(p) {
   setInterval(tick, 1000);
 };
 
-window.reqMore = function(sid, min) {
-  var c = curC();
-  if (!c) return;
-  var s = getSess(sid);
-  if (!s) return;
-  var r = { id: "RQ" + Date.now().toString(36).toUpperCase().slice(-6),
-    type: "extra_time", customerId: c.id, sessionId: sid,
-    customerName: c.name, items: [s.expName + " +" + min + "min"],
-    total: 0, pointsUsed: 0, minutes: min, status: "pending",
-    note: "", createdAt: Date.now(), processedAt: 0 };
-  upsertReq(r);
-  alert("✅ Sent! Show at counter.");
-};
+// ============ START + REALTIME ============
+function rtRefresh(){
+  loadAll().then(function(){ if(curR) render(curR,{}); }).catch(function(){});
+}
+function setupRealtime(){
+  if(!sb) return;
+  ["customers","sessions","tournaments","requests","addons"].forEach(function(t){
+    try{
+      sb.channel("rt-"+t+"-"+Math.random().toString(36).slice(2))
+        .on("postgres_changes",{event:"*",schema:"public",table:t},rtRefresh)
+        .subscribe();
+    }catch(e){ console.error(e); }
+  });
+}
 
-// START
 (function() {
   try {
     var cached = JSON.parse(localStorage.getItem("yondu_cache") || "null");
@@ -1232,6 +1284,7 @@ window.reqMore = function(sid, min) {
 
 loadAll().then(function() {
   if (curR) render(curR, {});
+  setupRealtime();
 }).catch(function(e) { console.error("Load failed:", e); });
 </script>
 </body></html>
