@@ -387,19 +387,40 @@ window.deleteCust = function(cid) {
   confirmSheet({ title: "Delete Customer?", message: "Delete " + (c ? c.name : "this customer") + "?\nThis cannot be undone.", yesText: "Delete", danger: true,
     onYes: function() { loadAll().then(function() { saveC(CUST.filter(function(x) { return x.id !== cid; })); toast("🗑 Deleted", "success"); render("requests", {}); }); } });
 };
+
 window.approveReq = function(rid) {
-  loadAll().then(function() {
-    var r2 = REQ.find(function(x) { return x.id === rid; }); if (!r2) return;
-    var c = CUST.find(function(x) { return x.id === r2.customerId; });
-    if (r2.type === "snack" && c) { var earned = Math.floor(r2.total / RR); c.points = Math.min(POINTS_MAX, (c.points || 0) + earned); c.totalSpent += r2.total; var arr = CUST.slice(); var i = arr.findIndex(function(x) { return x.id === c.id; }); if (i >= 0) arr[i] = c; saveC(arr); }
-    r2.status = "approved"; r2.processedAt = Date.now(); upsertReq(r2);
+  var r2 = REQ.find(function(x) { return x.id === rid; });
+  if (!r2) return;
+  var c = CUST.find(function(x) { return x.id === r2.customerId; });
+  var earnUpdate = null;
+  if (r2.type === "snack" && c) {
+    var earned = Math.floor(r2.total / RR);
+    earnUpdate = { points: Math.min(POINTS_MAX, (c.points || 0) + earned), total_spent: (c.totalSpent || 0) + r2.total };
+  }
+  var reqUpdate = sb.from("requests").update({ status: "approved", processed_at: Date.now() }).eq("id", rid);
+  var custUpdate = earnUpdate ? sb.from("customers").update(earnUpdate).eq("id", c.id) : Promise.resolve();
+  Promise.all([reqUpdate, custUpdate]).then(function(results) {
+    var err = results.find(function(r) { return r && r.error; });
+    if (err) { toast("❌ " + err.error.message, "error"); return; }
+    r2.status = "approved";
+    r2.processedAt = Date.now();
     toast("✅ Approved", "success");
     render("requests", {});
-  });
+  }).catch(function(e) { toast("❌ " + e.message, "error"); });
 };
+
 window.rejectReq = function(rid) {
   confirmSheet({ title: "Reject Request?", yesText: "Reject", danger: true,
-    onYes: function() { loadAll().then(function() { var r2 = REQ.find(function(x) { return x.id === rid; }); if (!r2) return; r2.status = "rejected"; r2.processedAt = Date.now(); upsertReq(r2); toast("Rejected", "warn"); render("requests", {}); }); } });
+    onYes: function() {
+      sb.from("requests").update({ status: "rejected", processed_at: Date.now() }).eq("id", rid).then(function(res) {
+        if (res.error) { toast("❌ " + res.error.message, "error"); return; }
+        var r2 = REQ.find(function(x) { return x.id === rid; });
+        if (r2) { r2.status = "rejected"; r2.processedAt = Date.now(); }
+        toast("Rejected", "warn");
+        render("requests", {});
+      });
+    }
+  });
 };
 
 R.customers = function() {
@@ -500,7 +521,9 @@ window.delItem = function(id) {
   var a = ADD.find(function(x) { return x.id === id; }); if (!a) return;
   confirmSheet({ title: "Delete " + a.name + "?", yesText: "Delete", danger: true,
     onYes: function() { loadAll().then(function() { var arr = ADD.filter(function(x) { return x.id !== id; }); var old = ADD; ADD = arr; syncTable("addons", arr, old, function(r) { return { id: r.id, name: r.name, price: r.price, points_price: r.points_price || 0, photo: r.photo || "" }; }); toast("🗑 Deleted", "success"); render("menu", {}); }); } });
-};R.tourneys = function() {
+};
+
+R.tourneys = function() {
   if (!can("tournaments")) return R.denied();
   var cards = TOURN.length ? TOURN.map(function(t) {
     var players = t.players || [];
@@ -567,9 +590,6 @@ R.reports = function() {
   return '<div class="screen"><div class="wrap"><a href="javascript:go(\'more\')" style="color:var(--muted);font-size:13px">← More</a><h1 style="margin-top:20px">Reports</h1><div class="grid4"><div class="stat"><div class="v">₹' + tr + '</div><div class="l">Revenue</div></div><div class="stat"><div class="v" style="color:var(--green)">₹' + cash + '</div><div class="l">Cash</div></div><div class="stat"><div class="v" style="color:var(--cyan)">₹' + upi + '</div><div class="l">UPI</div></div><div class="stat"><div class="v" style="color:var(--gold-bright)">₹' + pts + '</div><div class="l">Points</div></div></div></div></div>';
 };
 
-/* ============================================================
-   SETTINGS PAGE
-   ============================================================ */
 R.settings = function() {
   if (!can("settings")) return R.denied();
   var s = (SETTINGS && SETTINGS.cafe) || {};
@@ -633,9 +653,6 @@ window.saveAllSettings = function() {
   });
 };
 
-/* ============================================================
-   FORCE PASSWORD RESET
-   ============================================================ */
 function forcePasswordReset(admin, isExpired) {
   var m = document.createElement("div");
   m.id = "forceResetModal"; m.className = "modal";
@@ -675,9 +692,6 @@ function forcePasswordReset(admin, isExpired) {
   if (cancel) cancel.onclick = function() { m.remove(); };
 }
 
-/* ============================================================
-   STAFF PROFILE
-   ============================================================ */
 R.me = function() {
   var me = getMe();
   if (!me) return R.denied();
@@ -713,9 +727,6 @@ R.me = function() {
   '</div></div>';
 };
 
-/* ============================================================
-   STAFF ACCOUNTS
-   ============================================================ */
 R.admin_users = function() {
   if (!isOwner()) return R.denied();
   var me = getMe();
@@ -836,9 +847,6 @@ window.removeAdmin = function(uname) {
     onYes: function() { loadAll().then(function() { var arr = ADMINS.filter(function(x) { return x.username !== uname; }); ADMINS = arr; saveAdmins(arr).then(function() { toast("🗑 Removed", "success"); render("admin_users", {}); }); }); } });
 };
 
-/* ============================================================
-   NEW SALE
-   ============================================================ */
 R.newsale = function() {
   if (!bk) bk = { exp: null, time: null, players: 1 };
   var e = EXP.find(function(x) { return x.id === bk.exp; });
@@ -879,9 +887,6 @@ window.saveSale = function() {
   });
 };
 
-/* ============================================================
-   REALTIME + STARTUP
-   ============================================================ */
 function setupAdminRealtime() {
   if (!sb) return;
   try { sb.removeAllChannels(); } catch(e) {}
