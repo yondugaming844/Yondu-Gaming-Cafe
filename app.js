@@ -1,13 +1,10 @@
-/* ============================================================
-   YONDU CUSTOMER APP
-   ============================================================ */
+/* YONDU CUSTOMER APP */
 
 var curR = "";
 var bk = null;
 var sc = {};
 var signupPic = "";
 
-/* ---- Customer session ---- */
 function curC() {
   var id = DB.get("yondu_current_customer", null);
   if (!id) return null;
@@ -18,14 +15,11 @@ function signOut() { DB.del("yondu_current_customer"); DB.del("yondu_guest_mode"
 function isGuest() { return !curC() && DB.get("yondu_guest_mode", false); }
 function setGuest() { DB.set("yondu_guest_mode", true); }
 
-/* ---- Router ---- */
 var PUBLIC_ROUTES = { landing: 1, signin: 1, signup: 1, login: 1 };
 var R = {};
-
 function go(r, p) { curR = r; window.scrollTo(0, 0); render(r, p || {}); }
 window.go = go;
 
-/* Secret 5-tap gesture → staff login */
 var adminTaps = 0, adminTapTimer = null;
 window.tapAdmin = function() {
   adminTaps++;
@@ -33,7 +27,7 @@ window.tapAdmin = function() {
   adminTapTimer = setTimeout(function() { adminTaps = 0; }, 1500);
   if (adminTaps >= 5) {
     adminTaps = 0;
-    window.location.href = "admin.html";
+    if (confirm("🔐 Staff login?\n\nThis opens the admin panel.")) window.location.href = "admin.html";
   }
 };
 
@@ -62,18 +56,13 @@ function renderNav(r) {
     '<a href="javascript:go(\'profile\')" class="' + (r === "profile" ? "on" : "") + '"><span class="ic">🎁</span>Me</a>';
 }
 
-/* ============================================================
-   SCREENS
-   ============================================================ */
-
 R.landing = function() {
   return '<div class="screen" style="padding-top:40px"><div class="wrap" style="max-width:440px">' +
     '<div style="text-align:center;margin-bottom:30px">' +
       '<div class="brand-icon" style="margin:0 auto 20px;width:110px;height:110px;border-width:3px"></div>' +
       '<h1 style="font-size:32px;color:var(--gold);letter-spacing:4px;font-weight:800">YONDU</h1>' +
       '<p style="color:var(--muted);font-size:12px;letter-spacing:4px;margin-top:6px">GAMING CAFÉ</p>' +
-      '<p style="color:var(--muted);font-size:13px;margin-top:14px;font-style:italic">Where Legends Play</p>' +
-    '</div>' +
+      '<p style="color:var(--muted);font-size:13px;margin-top:14px;font-style:italic">Where Legends Play</p></div>' +
     '<button class="btn" onclick="go(\'signin\')">Sign In</button>' +
     '<button class="btn dark" style="margin-top:10px" onclick="go(\'signup\')">Create Account</button>' +
     '<button class="btn outline" style="margin-top:10px" onclick="guestEnter()">👀 Browse as Guest</button>' +
@@ -90,7 +79,6 @@ R.landing = function() {
     '<div style="text-align:center;margin-top:24px"><a href="admin.html" style="color:var(--muted);font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;opacity:.55">Staff Login →</a></div>' +
   '</div></div>';
 };
-
 window.guestEnter = function() { setGuest(); go("guest_home"); };
 
 R.guest_home = function() {
@@ -107,8 +95,7 @@ R.guest_home = function() {
       '<div style="color:var(--gold);font-size:10px;font-weight:700;letter-spacing:1.5px">BROWSING AS</div>' +
       '<div style="font-size:20px;font-weight:800;color:var(--txt);margin-top:4px">Guest 👀</div>' +
       '<div style="color:var(--muted);font-size:12px;margin-top:6px">Sign up to book, order, compete, and earn rewards</div>' +
-      '<button class="btn" style="margin-top:14px" onclick="go(\'signup\')">🎁 Sign Up · 30 min FREE</button>' +
-    '</div>' +
+      '<button class="btn" style="margin-top:14px" onclick="go(\'signup\')">🎁 Sign Up · 30 min FREE</button></div>' +
     '<div class="sec-label">📍 Visit Us</div>' +
     '<div class="card" style="padding:6px 16px">' +
       '<div class="benefit"><div class="ic">🕐</div><div><div class="t">Hours</div><div class="d">' + CAFE_INFO.hours + '</div></div></div>' +
@@ -175,8 +162,7 @@ R.signup = function() {
     '<div style="text-align:center;margin:6px 0 18px">' +
       '<div onclick="pickSignupPic()" style="display:inline-block;cursor:pointer">' + av + '</div>' +
       '<div style="color:var(--muted);font-size:12px;margin-top:8px">' + hint + '</div>' +
-      '<input type="file" id="signupPicInput" accept="image/*" style="display:none" onchange="handleSignupPic(this)">' +
-    '</div>' +
+      '<input type="file" id="signupPicInput" accept="image/*" style="display:none" onchange="handleSignupPic(this)"></div>' +
     '<label>Your Name</label><input id="sn" placeholder="e.g. Arjun" maxlength="30">' +
     '<div style="font-size:11px;color:var(--muted);margin:-6px 0 10px;line-height:1.5">At least 3 letters · must be unique</div>' +
     '<label>Birthday</label><input id="sb" type="date">' +
@@ -209,7 +195,6 @@ window.doSignup = function() {
   if (CUST.find(function(c) { return c.name.toLowerCase() === n.toLowerCase(); })) return alert("❌ Name taken");
   if (p1.length !== 4 || !/^\d{4}$/.test(p1)) return alert("PIN 4 digits");
   if (p1 !== p2) return alert("PINs don't match");
-
   var all = CUST.slice();
   var refB = 0, refId = null;
   if (r) {
@@ -321,9 +306,8 @@ R.profile = function() {
     ? '<div class="avatar avatar-lg" style="background-image:url(\'' + c.profilePic + '\');margin:0 auto"></div>'
     : '<div class="avatar avatar-lg" style="margin:0 auto">' + c.name.charAt(0).toUpperCase() + '</div>';
   var photoBtns = '<div style="margin-top:10px">' +
-      '<button class="btn sm dark" onclick="changePhoto()" style="margin:0 4px">📷 ' + (c.profilePic ? "Change" : "Add") + ' Photo</button>' +
-      (c.profilePic ? '<button class="btn sm dark" onclick="removePhoto()" style="margin:0 4px;color:var(--red)">Remove</button>' : '') +
-    '</div>';
+    '<button class="btn sm dark" onclick="changePhoto()" style="margin:0 4px">📷 ' + (c.profilePic ? "Change" : "Add") + ' Photo</button>' +
+    (c.profilePic ? '<button class="btn sm dark" onclick="removePhoto()" style="margin:0 4px;color:var(--red)">Remove</button>' : '') + '</div>';
   var badges = BADGES.map(function(b) {
     var has = ub.find(function(u) { return u.id === b.id; });
     return '<div class="badge-item ' + (has ? "unlocked" : "locked") + '"><span class="em">' + b.em + '</span><div class="nm">' + b.name + '</div></div>';
@@ -343,38 +327,27 @@ R.profile = function() {
       '<div style="font-weight:700;font-size:14px;margin-bottom:6px">Your code: <span style="color:var(--gold-bright);font-family:\'Courier New\',monospace;font-size:18px">' + c.id + '</span></div>' +
       '<div style="color:var(--muted);font-size:12px;margin-bottom:10px">Friend signs up → both get ' + REF_BONUS + ' points</div>' +
       '<div style="color:var(--cyan);font-weight:700;font-size:13px;margin-bottom:10px">Referred ' + (c.referrals || 0) + '</div>' +
-      '<button class="btn green" onclick="shareRef()">📤 Share on WhatsApp</button>' +
-    '</div>' +
+      '<button class="btn green" onclick="shareRef()">📤 Share on WhatsApp</button></div>' +
     '<div class="sec-label">📱 Connect</div>' +
     '<div class="grid2">' +
-      '<a class="card" href="' + getIG() + '" target="_blank" rel="noopener" style="text-align:center;text-decoration:none;color:var(--txt);margin:0;padding:14px">' +
-        '<div style="font-weight:700;font-size:14px;color:var(--gold)">📸 Instagram</div>' +
-        '<img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(getIG()) + '" style="width:120px;height:120px;background:#fff;padding:8px;border-radius:10px;margin:10px auto 0;display:block">' +
-      '</a>' +
-      '<a class="card" href="' + getGR() + '" target="_blank" rel="noopener" style="text-align:center;text-decoration:none;color:var(--txt);margin:0;padding:14px">' +
-        '<div style="font-weight:700;font-size:14px;color:var(--gold)">⭐ Google</div>' +
-        '<img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(getGR()) + '" style="width:120px;height:120px;background:#fff;padding:8px;border-radius:10px;margin:10px auto 0;display:block">' +
-      '</a>' +
+      '<a class="card" href="' + getIG() + '" target="_blank" rel="noopener" style="text-align:center;text-decoration:none;color:var(--txt);margin:0;padding:14px"><div style="font-weight:700;font-size:14px;color:var(--gold)">📸 Instagram</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(getIG()) + '" style="width:120px;height:120px;background:#fff;padding:8px;border-radius:10px;margin:10px auto 0;display:block"></a>' +
+      '<a class="card" href="' + getGR() + '" target="_blank" rel="noopener" style="text-align:center;text-decoration:none;color:var(--txt);margin:0;padding:14px"><div style="font-weight:700;font-size:14px;color:var(--gold)">⭐ Google</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(getGR()) + '" style="width:120px;height:120px;background:#fff;padding:8px;border-radius:10px;margin:10px auto 0;display:block"></a>' +
     '</div>' +
     '<button class="btn dark" style="margin-top:20px" onclick="changePin()">🔒 Change PIN</button>' +
     '<button class="btn dark" style="margin-top:8px" onclick="editName()">✏️ Change Name</button>' +
     '<button class="btn danger" style="margin-top:8px" onclick="signOut()">Sign Out</button>' +
-    '<div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">' +
-      '<div onclick="tapAdmin()" style="color:var(--muted);font-size:10px;letter-spacing:1.5px;cursor:pointer;user-select:none;padding:8px">YONDU · V1.0</div>' +
-    '</div>' +
+    '<div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)"><div onclick="tapAdmin()" style="color:var(--muted);font-size:10px;letter-spacing:1.5px;cursor:pointer;user-select:none;padding:8px">YONDU · V1.0</div></div>' +
   '</div></div>';
 };
 
 window.changePhoto = function() {
   var inp = document.createElement("input");
-  inp.type = "file";
-  inp.accept = "image/*";
+  inp.type = "file"; inp.accept = "image/*";
   inp.onchange = function() {
     var f = inp.files && inp.files[0];
     readImageFile(f, function(dataUrl) {
       if (!dataUrl) return;
-      var c = curC();
-      if (!c) return;
+      var c = curC(); if (!c) return;
       c.profilePic = dataUrl;
       var a = CUST.slice();
       var i = a.findIndex(function(x) { return x.id === c.id; });
@@ -386,7 +359,6 @@ window.changePhoto = function() {
   };
   inp.click();
 };
-
 window.removePhoto = function() {
   var c = curC();
   if (!c || !confirm("Remove profile photo?")) return;
@@ -397,20 +369,15 @@ window.removePhoto = function() {
   saveC(a);
   render("profile", {});
 };
-
 window.shareRef = function() {
-  var c = curC();
-  if (!c) return;
+  var c = curC(); if (!c) return;
   var m = "🎮 Join Yondu Gaming Café!\n\nUse my code: " + c.id + "\nGet " + REF_BONUS + " bonus points + 30 min FREE!\n\n👉 " + location.origin;
   if (navigator.share) navigator.share({ title: "Yondu", text: m }).catch(function() {});
   else window.open("https://wa.me/?text=" + encodeURIComponent(m), "_blank");
 };
-
 window.changePin = function() {
-  var c = curC();
-  if (!c) return;
-  var o = prompt("Current PIN:");
-  if (!o) return;
+  var c = curC(); if (!c) return;
+  var o = prompt("Current PIN:"); if (!o) return;
   if (!checkPin(o, c.pinHash)) return alert("Wrong PIN");
   var n = prompt("New 4-digit PIN:");
   if (!n || n.length !== 4 || !/^\d{4}$/.test(n)) return alert("Must be 4 digits");
@@ -423,10 +390,8 @@ window.changePin = function() {
   alert("✅ PIN changed!");
   render("profile", {});
 };
-
 window.editName = function() {
-  var c = curC();
-  if (!c) return;
+  var c = curC(); if (!c) return;
   var n = prompt("New name:", c.name);
   if (!n || !n.trim()) return;
   var nn = n.trim();
@@ -442,16 +407,11 @@ window.editName = function() {
 };
 
 R.book = function() {
-  var c = curC();
-  if (!c) return R.landing();
+  var c = curC(); if (!c) return R.landing();
   if (!bk) bk = { exp: null, time: null, players: 1 };
   var e = EXP.find(function(x) { return x.id === bk.exp; });
   var expCards = EXP.map(function(ex) {
-    return '<div class="card click ' + (bk.exp === ex.id ? "selected" : "") + '" onclick="pickE(\'' + ex.id + '\')">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center">' +
-        '<div style="font-size:16px;font-weight:700;color:' + (bk.exp === ex.id ? "var(--gold)" : "var(--txt)") + '">' + ex.name + '</div>' +
-        (bk.exp === ex.id ? '<span class="badge open">✓</span>' : "") + '</div>' +
-      '<div style="color:var(--muted);font-size:13px;margin-top:4px">' + (ex.sub || "Popular") + '</div></div>';
+    return '<div class="card click ' + (bk.exp === ex.id ? "selected" : "") + '" onclick="pickE(\'' + ex.id + '\')"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:16px;font-weight:700;color:' + (bk.exp === ex.id ? "var(--gold)" : "var(--txt)") + '">' + ex.name + '</div>' + (bk.exp === ex.id ? '<span class="badge open">✓</span>' : "") + '</div><div style="color:var(--muted);font-size:13px;margin-top:4px">' + (ex.sub || "Popular") + '</div></div>';
   }).join("");
   var dur = "";
   if (e && !e.fixed) {
@@ -461,9 +421,9 @@ R.book = function() {
     dur = '<div class="sec-label" style="margin-top:20px">02 · Duration</div><div class="grid2">' + tiles + '</div>' +
       '<div class="sec-label" style="margin-top:20px">03 · Players</div>' +
       '<div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:14px">' +
-        '<button class="qty-btn" style="width:48px;height:48px" onclick="chP(-1)">−</button>' +
-        '<div style="font-size:32px;font-weight:800;color:var(--gold-bright)">' + bk.players + '</div>' +
-        '<button class="qty-btn plus" style="width:48px;height:48px" onclick="chP(1)">+</button></div>';
+      '<button class="qty-btn" style="width:48px;height:48px" onclick="chP(-1)">−</button>' +
+      '<div style="font-size:32px;font-weight:800;color:var(--gold-bright)">' + bk.players + '</div>' +
+      '<button class="qty-btn plus" style="width:48px;height:48px" onclick="chP(1)">+</button></div>';
   }
   var cf = e ? '<div style="position:fixed;bottom:80px;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:14px 20px;z-index:50"><button class="btn" style="width:100%" onclick="submitBk()">Request Booking →</button></div>' : "";
   return '<div class="screen"><div class="wrap" style="padding-bottom:120px">' +
@@ -472,7 +432,6 @@ R.book = function() {
     '<div class="notice gold" style="margin-top:20px">💡 Payment at counter. Admin will assign your station.</div>' +
   '</div></div>' + cf;
 };
-
 window.pickE = function(id) {
   bk.exp = id;
   var e = EXP.find(function(x) { return x.id === id; });
@@ -482,10 +441,8 @@ window.pickE = function(id) {
 };
 window.pickT = function(m) { bk.time = m; render("book", {}); };
 window.chP = function(d) { var n = bk.players + d; if (n < 1 || n > 8) return; bk.players = n; render("book", {}); };
-
 window.submitBk = function() {
-  var c = curC();
-  if (!c) return;
+  var c = curC(); if (!c) return;
   var e = EXP.find(function(x) { return x.id === bk.exp; });
   if (!e) return alert("Pick an experience");
   var isMem = (e.id === "member" || e.id === "racemem");
@@ -511,17 +468,13 @@ R.confirm = function(p) {
     '<div class="card" style="text-align:center"><div style="color:var(--gold);font-size:10px;font-weight:700;letter-spacing:2px">YOUR NUMBER</div><div style="font-size:32px;font-weight:800;letter-spacing:4px;color:var(--gold-bright);font-family:\'Courier New\',monospace;margin-top:6px">' + (s.customerId || "----") + '</div></div>' +
     '<div class="card"><div style="font-size:16px;font-weight:700;margin-bottom:8px">' + s.name + '</div><div style="color:var(--muted);font-size:13px;margin-bottom:10px">' + s.items.join(" · ") + '</div><span class="badge pending">⏳ PENDING</span></div>' +
     '<button class="btn dark" onclick="go(\'mybookings\')">My Bookings</button>' +
-    '<button class="btn" style="margin-top:8px" onclick="go(\'book\')">Book Another</button>' +
-  '</div></div>';
+    '<button class="btn" style="margin-top:8px" onclick="go(\'book\')">Book Another</button></div></div>';
 };
 
 R.mybookings = function() {
-  var c = curC();
-  if (!c) return R.landing();
+  var c = curC(); if (!c) return R.landing();
   var mine = SESS.filter(function(s) { return s.customerId === c.id; });
-  if (!mine.length) {
-    return '<div class="screen"><div class="wrap"><h1>My Bookings</h1><div class="empty"><div class="big">📋</div><div class="msg">NO BOOKINGS</div><button class="btn" style="max-width:280px;margin:20px auto 0" onclick="go(\'book\')">Book Now</button></div></div></div>';
-  }
+  if (!mine.length) return '<div class="screen"><div class="wrap"><h1>My Bookings</h1><div class="empty"><div class="big">📋</div><div class="msg">NO BOOKINGS</div><button class="btn" style="max-width:280px;margin:20px auto 0" onclick="go(\'book\')">Book Now</button></div></div></div>';
   var now = Date.now();
   var cards = mine.slice(0, 20).map(function(s) {
     var st = s.status, ts = "", cls = "";
@@ -539,28 +492,16 @@ R.mybookings = function() {
       }
     }
     var stCol = { pending: "var(--gold-bright)", paid: "var(--cyan)", playing: "var(--cyan)", ended: "var(--muted)" };
-    return '<div class="card click" onclick="go(\'session\',{id:\'' + s.id + '\'})">' +
-      '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><div style="font-size:15px;font-weight:700">' + s.name + '</div>' +
-      '<span class="badge" style="background:var(--card2);color:' + (stCol[st] || "var(--muted)") + '">' + st.toUpperCase() + '</span></div>' +
-      '<div style="color:var(--muted);font-size:13px;margin-bottom:10px">' + s.items.join(" · ") + '</div>' +
-      (ts ? '<div class="timer-huge ' + cls + '" style="font-size:36px;text-align:left">' + ts + '</div>' : "") +
-      '<div style="font-size:11px;color:var(--muted);font-weight:700">' + s.id + '</div></div>';
+    return '<div class="card click" onclick="go(\'session\',{id:\'' + s.id + '\'})"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><div style="font-size:15px;font-weight:700">' + s.name + '</div><span class="badge" style="background:var(--card2);color:' + (stCol[st] || "var(--muted)") + '">' + st.toUpperCase() + '</span></div><div style="color:var(--muted);font-size:13px;margin-bottom:10px">' + s.items.join(" · ") + '</div>' + (ts ? '<div class="timer-huge ' + cls + '" style="font-size:36px;text-align:left">' + ts + '</div>' : "") + '<div style="font-size:11px;color:var(--muted);font-weight:700">' + s.id + '</div></div>';
   }).join("");
   return '<div class="screen"><div class="wrap"><h1>My Bookings</h1>' + cards + '</div></div>';
 };
 
 R.snacks = function() {
-  var c = curC();
-  if (!c) return R.landing();
+  var c = curC(); if (!c) return R.landing();
   var cnt = Object.keys(sc).reduce(function(s, k) { return s + sc[k]; }, 0);
-  var total = Object.keys(sc).reduce(function(s, id) {
-    var a = ADD.find(function(x) { return x.id === id; });
-    return s + (a ? a.price * sc[id] : 0);
-  }, 0);
-  var ptsTotal = Object.keys(sc).reduce(function(s, id) {
-    var a = ADD.find(function(x) { return x.id === id; });
-    return s + (a ? (a.points_price || 0) * sc[id] : 0);
-  }, 0);
+  var total = Object.keys(sc).reduce(function(s, id) { var a = ADD.find(function(x) { return x.id === id; }); return s + (a ? a.price * sc[id] : 0); }, 0);
+  var ptsTotal = Object.keys(sc).reduce(function(s, id) { var a = ADD.find(function(x) { return x.id === id; }); return s + (a ? (a.points_price || 0) * sc[id] : 0); }, 0);
   var items = ADD.length ? ADD.map(function(a) {
     var q = sc[a.id] || 0;
     var ctrl = q === 0
@@ -572,55 +513,27 @@ R.snacks = function() {
   return '<div class="screen"><div class="wrap" style="padding-bottom:180px">' +
     '<div class="brand"><div class="brand-icon">🍟</div><div class="brand-txt"><div class="g">Jay Shree Ganesha</div><div class="n">Snacks & Drinks</div><div class="s">PAY AT COUNTER</div></div></div>' +
     '<div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;margin-bottom:14px"><div><div style="color:var(--gold);font-size:10px;font-weight:700;letter-spacing:1.5px">YOUR POINTS</div><div style="font-size:24px;font-weight:800;color:var(--gold-bright);line-height:1;margin-top:4px">' + c.points + '</div></div></div>' +
-    items +
-  '</div></div>' + sticky;
+    items + '</div></div>' + sticky;
 };
 window.addS = function(id) { sc[id] = (sc[id] || 0) + 1; render("snacks", {}); };
 window.remS = function(id) { if (sc[id]) sc[id]--; if (sc[id] <= 0) delete sc[id]; render("snacks", {}); };
-
 window.openSC = function() {
-  var c = curC();
-  if (!c) return;
-  var total = Object.keys(sc).reduce(function(s, id) {
-    var a = ADD.find(function(x) { return x.id === id; });
-    return s + (a ? a.price * sc[id] : 0);
-  }, 0);
-  var ptsTotal = Object.keys(sc).reduce(function(s, id) {
-    var a = ADD.find(function(x) { return x.id === id; });
-    return s + (a ? (a.points_price || 0) * sc[id] : 0);
-  }, 0);
+  var c = curC(); if (!c) return;
+  var total = Object.keys(sc).reduce(function(s, id) { var a = ADD.find(function(x) { return x.id === id; }); return s + (a ? a.price * sc[id] : 0); }, 0);
+  var ptsTotal = Object.keys(sc).reduce(function(s, id) { var a = ADD.find(function(x) { return x.id === id; }); return s + (a ? (a.points_price || 0) * sc[id] : 0); }, 0);
   if (total <= 0) return;
   var m = document.createElement("div");
   m.id = "scm"; m.className = "modal";
-  m.innerHTML = '<div class="sheet"><h2>Send Order</h2>' +
-    '<div class="s">Total: ₹' + total + (ptsTotal ? " · or " + ptsTotal + " pts" : "") + '</div>' +
-    '<label>Note <span class="opt">(optional)</span></label><input id="snote" placeholder="e.g. extra ice">' +
-    '<div class="notice gold">📲 Order goes to admin. Pay or use points at counter.</div>' +
-    '<button class="btn pink" onclick="submitSO()">Send Order →</button>' +
-    '<button class="btn dark" style="margin-top:8px" onclick="document.getElementById(\'scm\').remove()">Cancel</button></div>';
+  m.innerHTML = '<div class="sheet"><h2>Send Order</h2><div class="s">Total: ₹' + total + (ptsTotal ? " · or " + ptsTotal + " pts" : "") + '</div><label>Note <span class="opt">(optional)</span></label><input id="snote" placeholder="e.g. extra ice"><div class="notice gold">📲 Order goes to admin. Pay or use points at counter.</div><button class="btn pink" onclick="submitSO()">Send Order →</button><button class="btn dark" style="margin-top:8px" onclick="document.getElementById(\'scm\').remove()">Cancel</button></div>';
   document.body.appendChild(m);
 };
-
 window.submitSO = function() {
-  var c = curC();
-  if (!c) return;
+  var c = curC(); if (!c) return;
   var note = document.getElementById("snote") ? document.getElementById("snote").value.trim() : "";
-  var lines = Object.keys(sc).map(function(id) {
-    var a = ADD.find(function(x) { return x.id === id; });
-    return a ? a.name + " × " + sc[id] : "";
-  }).filter(Boolean);
-  var total = Object.keys(sc).reduce(function(s, id) {
-    var a = ADD.find(function(x) { return x.id === id; });
-    return s + (a ? a.price * sc[id] : 0);
-  }, 0);
-  var ptsTotal = Object.keys(sc).reduce(function(s, id) {
-    var a = ADD.find(function(x) { return x.id === id; });
-    return s + (a ? (a.points_price || 0) * sc[id] : 0);
-  }, 0);
-  var r = { id: "RQ" + Date.now().toString(36).toUpperCase().slice(-6),
-    type: "snack", customerId: c.id, sessionId: null,
-    customerName: c.name, items: lines, total: total, pointsUsed: ptsTotal,
-    minutes: 0, status: "pending", note: note, createdAt: Date.now(), processedAt: 0 };
+  var lines = Object.keys(sc).map(function(id) { var a = ADD.find(function(x) { return x.id === id; }); return a ? a.name + " × " + sc[id] : ""; }).filter(Boolean);
+  var total = Object.keys(sc).reduce(function(s, id) { var a = ADD.find(function(x) { return x.id === id; }); return s + (a ? a.price * sc[id] : 0); }, 0);
+  var ptsTotal = Object.keys(sc).reduce(function(s, id) { var a = ADD.find(function(x) { return x.id === id; }); return s + (a ? (a.points_price || 0) * sc[id] : 0); }, 0);
+  var r = { id: "RQ" + Date.now().toString(36).toUpperCase().slice(-6), type: "snack", customerId: c.id, sessionId: null, customerName: c.name, items: lines, total: total, pointsUsed: ptsTotal, minutes: 0, status: "pending", note: note, createdAt: Date.now(), processedAt: 0 };
   upsertReq(r);
   document.getElementById("scm").remove();
   sc = {};
@@ -629,8 +542,7 @@ window.submitSO = function() {
 };
 
 R.tournaments = function() {
-  var c = curC();
-  if (!c) return R.landing();
+  var c = curC(); if (!c) return R.landing();
   var open = TOURN.filter(function(t) { return t.status !== "done"; });
   var past = TOURN.filter(function(t) { return t.status === "done"; });
   return '<div class="screen"><div class="wrap">' +
@@ -644,10 +556,7 @@ function tCrd(t, dim) {
   var players = t.players || [];
   var f = players.length;
   var full = f >= (t.maxPlayers || 16);
-  var sb2 = t.status === "done" ? '<span class="badge done">FINISHED</span>' :
-           t.status === "live" ? '<span class="badge live">● LIVE</span>' :
-           full ? '<span class="badge full">SOLD OUT</span>' :
-           '<span class="badge open">● OPEN</span>';
+  var sb2 = t.status === "done" ? '<span class="badge done">FINISHED</span>' : t.status === "live" ? '<span class="badge live">● LIVE</span>' : full ? '<span class="badge full">SOLD OUT</span>' : '<span class="badge open">● OPEN</span>';
   var dt = (t.date && t.time) ? new Date(t.date + "T" + t.time) : new Date();
   var ml = Math.max(0, dt - Date.now());
   var dl = Math.floor(ml / 86400000);
@@ -657,42 +566,28 @@ function tCrd(t, dim) {
     ? '<img src="' + t.bannerPic + '" style="width:100%;height:130px;object-fit:cover;display:block"><div style="background:var(--card2);padding:14px 18px;position:relative"><div style="position:absolute;top:10px;right:12px">' + sb2 + '</div><div style="font-size:16px;font-weight:800;color:var(--txt)">' + t.name + '</div><div style="color:var(--cyan);font-size:12px;font-weight:700;margin-top:3px">🎮 ' + t.game + '</div></div>'
     : '<div style="background:linear-gradient(135deg,#1a1508,#0d0b05);padding:18px;position:relative"><div style="position:absolute;top:12px;right:12px">' + sb2 + '</div><div style="font-size:38px">' + (t.banner || "🏆") + '</div><div style="font-size:18px;font-weight:800;margin-top:8px;color:var(--txt)">' + t.name + '</div><div style="color:var(--cyan);font-size:13px;font-weight:700;margin-top:4px">🎮 ' + t.game + '</div></div>';
   return '<div class="t-card" onclick="go(\'detail\',{id:\'' + t.id + '\'})">' + header +
-    '<div style="padding:16px 18px 18px">' +
-      '<div class="grid2" style="margin-bottom:12px">' +
-        '<div style="background:var(--card2);padding:10px;border-radius:8px;text-align:center"><div style="font-size:9px;color:var(--muted);font-weight:700">DATE</div><div style="font-size:13px;font-weight:800;margin-top:4px">' + dt.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) + '</div></div>' +
-        '<div style="background:var(--card2);padding:10px;border-radius:8px;text-align:center"><div style="font-size:9px;color:var(--muted);font-weight:700">SLOTS</div><div style="font-size:13px;font-weight:800;color:var(--cyan);margin-top:4px">' + f + '/' + (t.maxPlayers || 16) + '</div></div>' +
-      '</div>' +
-      '<div class="progress" style="margin:0"><div style="width:' + Math.round(f / (t.maxPlayers || 16) * 100) + '%"></div></div>' +
-      '<div style="display:flex;justify-content:space-between;margin-top:12px;align-items:center"><div style="font-size:12px;color:var(--muted);font-weight:700">⏰ ' + cd + '</div><div style="color:var(--gold);font-weight:800;font-size:13px">' + (dim ? "View →" : "Register →") + '</div></div>' +
-    '</div></div>';
+    '<div style="padding:16px 18px 18px"><div class="grid2" style="margin-bottom:12px">' +
+    '<div style="background:var(--card2);padding:10px;border-radius:8px;text-align:center"><div style="font-size:9px;color:var(--muted);font-weight:700">DATE</div><div style="font-size:13px;font-weight:800;margin-top:4px">' + dt.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) + '</div></div>' +
+    '<div style="background:var(--card2);padding:10px;border-radius:8px;text-align:center"><div style="font-size:9px;color:var(--muted);font-weight:700">SLOTS</div><div style="font-size:13px;font-weight:800;color:var(--cyan);margin-top:4px">' + f + '/' + (t.maxPlayers || 16) + '</div></div></div>' +
+    '<div class="progress" style="margin:0"><div style="width:' + Math.round(f / (t.maxPlayers || 16) * 100) + '%"></div></div>' +
+    '<div style="display:flex;justify-content:space-between;margin-top:12px;align-items:center"><div style="font-size:12px;color:var(--muted);font-weight:700">⏰ ' + cd + '</div><div style="color:var(--gold);font-weight:800;font-size:13px">' + (dim ? "View →" : "Register →") + '</div></div></div></div>';
 }
 
 R.detail = function(p) {
-  var t = getTid(p.id);
-  if (!t) return '<div class="screen"><div class="wrap"><h2>Not found</h2></div></div>';
+  var t = getTid(p.id); if (!t) return '<div class="screen"><div class="wrap"><h2>Not found</h2></div></div>';
   var players = t.players || [];
   var f = players.length;
   var full = f >= (t.maxPlayers || 16);
   var dt = new Date(t.date + "T" + t.time);
   var c = curC();
   var already = c && players.find(function(pl) { return pl.customerId === c.id; });
-  var prizes = [
-    { med: "🥇", label: "1ST", val: t.prize1 },
-    { med: "🥈", label: "2ND", val: t.prize2 },
-    { med: "🥉", label: "3RD", val: t.prize3 },
-    { med: "4️⃣", label: "4TH", val: t.prize4 }
-  ].filter(function(p2) { return p2.val; });
-  var prizeHTML = prizes.length ? '<div class="card" style="background:#1a1508;border:2px solid var(--gold);margin-top:12px"><div style="text-align:center;margin-bottom:14px"><div style="color:var(--gold);font-size:12px;font-weight:800;letter-spacing:2px">🏆 PRIZES</div></div>' +
-    prizes.map(function(p2) {
-      return '<div style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(201,169,97,.08);border-radius:8px;margin-bottom:8px"><div style="font-size:24px">' + p2.med + '</div><div><div style="color:var(--gold);font-size:10px;font-weight:800">' + p2.label + '</div><div style="font-weight:700;color:var(--txt);font-size:14px">' + p2.val + '</div></div></div>';
-    }).join("") + '</div>' : "";
-  var playerHTML = !f
-    ? '<div style="text-align:center;padding:24px;color:var(--muted)"><div style="font-size:36px">👤</div><div style="font-weight:700;margin-top:8px">Be the first!</div></div>'
-    : players.map(function(pl, i) {
-      var init = (pl.name || "?").charAt(0).toUpperCase();
-      var clr = ["#22d3ee", "#ec4899", "#c9a961", "#a78bfa", "#22c55e", "#fb923c"][i % 6];
-      return '<div class="player-pill"><div style="width:36px;height:36px;border-radius:50%;background:' + clr + '22;border:2px solid ' + clr + ';color:' + clr + ';display:flex;align-items:center;justify-content:center;font-weight:800">' + init + '</div><div style="flex:1"><div style="font-weight:700;color:var(--txt)">' + pl.name + '</div></div><span class="badge ' + (pl.paid ? "open" : "cash") + '">' + (pl.paid ? "Paid" : "Pending") + '</span></div>';
-    }).join("");
+  var prizes = [{ med: "🥇", label: "1ST", val: t.prize1 }, { med: "🥈", label: "2ND", val: t.prize2 }, { med: "🥉", label: "3RD", val: t.prize3 }, { med: "4️⃣", label: "4TH", val: t.prize4 }].filter(function(p2) { return p2.val; });
+  var prizeHTML = prizes.length ? '<div class="card" style="background:#1a1508;border:2px solid var(--gold);margin-top:12px"><div style="text-align:center;margin-bottom:14px"><div style="color:var(--gold);font-size:12px;font-weight:800;letter-spacing:2px">🏆 PRIZES</div></div>' + prizes.map(function(p2) { return '<div style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(201,169,97,.08);border-radius:8px;margin-bottom:8px"><div style="font-size:24px">' + p2.med + '</div><div><div style="color:var(--gold);font-size:10px;font-weight:800">' + p2.label + '</div><div style="font-weight:700;color:var(--txt);font-size:14px">' + p2.val + '</div></div></div>'; }).join("") + '</div>' : "";
+  var playerHTML = !f ? '<div style="text-align:center;padding:24px;color:var(--muted)"><div style="font-size:36px">👤</div><div style="font-weight:700;margin-top:8px">Be the first!</div></div>' : players.map(function(pl, i) {
+    var init = (pl.name || "?").charAt(0).toUpperCase();
+    var clr = ["#22d3ee", "#ec4899", "#c9a961", "#a78bfa", "#22c55e", "#fb923c"][i % 6];
+    return '<div class="player-pill"><div style="width:36px;height:36px;border-radius:50%;background:' + clr + '22;border:2px solid ' + clr + ';color:' + clr + ';display:flex;align-items:center;justify-content:center;font-weight:800">' + init + '</div><div style="flex:1"><div style="font-weight:700;color:var(--txt)">' + pl.name + '</div></div><span class="badge ' + (pl.paid ? "open" : "cash") + '">' + (pl.paid ? "Paid" : "Pending") + '</span></div>';
+  }).join("");
   var action = "";
   if (t.status !== "done") {
     if (!curC()) action = '<div style="position:fixed;bottom:80px;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:14px 20px;z-index:50"><button class="btn" style="width:100%" onclick="go(\'landing\')">Sign up to Register →</button></div>';
@@ -700,44 +595,20 @@ R.detail = function(p) {
     else if (full) action = '<div style="position:fixed;bottom:80px;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:16px 20px;z-index:50"><div style="text-align:center;color:#f87171;font-weight:800">❌ Full</div></div>';
     else action = '<div style="position:fixed;bottom:80px;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:14px 20px;z-index:50"><button class="btn pink" style="width:100%" onclick="openJ(\'' + t.id + '\')">Register →</button></div>';
   }
-  return '<div class="screen"><div class="wrap" style="padding-bottom:120px">' +
-    '<a href="javascript:go(\'tournaments\')" style="color:var(--muted);font-weight:600;font-size:13px">← Tournaments</a>' +
-    '<div class="t-hero" style="margin-top:12px;padding:0;overflow:hidden;border-radius:12px">' +
-      (t.bannerPic ? '<img src="' + t.bannerPic + '" style="width:100%;height:180px;object-fit:cover;display:block">' : "") +
-      '<div style="padding:28px 20px">' +
-        (!t.bannerPic ? '<div style="font-size:52px">' + (t.banner || "🏆") + '</div>' : "") +
-        '<div class="title">' + t.name + '</div><div class="game">🎮 ' + t.game + '</div>' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px">' +
-          '<div style="background:rgba(201,169,97,.1);padding:10px;border-radius:8px;text-align:center"><div style="font-size:10px;color:var(--gold);font-weight:700">DATE</div><div style="font-size:14px;font-weight:700;color:var(--txt);margin-top:4px">' + dt.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) + '</div></div>' +
-          '<div style="background:rgba(34,211,238,.1);padding:10px;border-radius:8px;text-align:center"><div style="font-size:10px;color:var(--cyan);font-weight:700">TIME</div><div style="font-size:14px;font-weight:700;color:var(--txt);margin-top:4px">' + fmtTime(t.time) + '</div></div>' +
-        '</div></div></div>' +
-    prizeHTML +
-    '<div class="card"><h2>👥 Players (' + f + '/' + (t.maxPlayers || 16) + ')</h2><div class="progress" style="margin:12px 0"><div style="width:' + Math.round(f / (t.maxPlayers || 16) * 100) + '%"></div></div>' + playerHTML + '</div>' +
-  '</div></div>' + action;
+  return '<div class="screen"><div class="wrap" style="padding-bottom:120px"><a href="javascript:go(\'tournaments\')" style="color:var(--muted);font-weight:600;font-size:13px">← Tournaments</a><div class="t-hero" style="margin-top:12px;padding:0;overflow:hidden;border-radius:12px">' + (t.bannerPic ? '<img src="' + t.bannerPic + '" style="width:100%;height:180px;object-fit:cover;display:block">' : "") + '<div style="padding:28px 20px">' + (!t.bannerPic ? '<div style="font-size:52px">' + (t.banner || "🏆") + '</div>' : "") + '<div class="title">' + t.name + '</div><div class="game">🎮 ' + t.game + '</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px"><div style="background:rgba(201,169,97,.1);padding:10px;border-radius:8px;text-align:center"><div style="font-size:10px;color:var(--gold);font-weight:700">DATE</div><div style="font-size:14px;font-weight:700;color:var(--txt);margin-top:4px">' + dt.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) + '</div></div><div style="background:rgba(34,211,238,.1);padding:10px;border-radius:8px;text-align:center"><div style="font-size:10px;color:var(--cyan);font-weight:700">TIME</div><div style="font-size:14px;font-weight:700;color:var(--txt);margin-top:4px">' + fmtTime(t.time) + '</div></div></div></div></div>' + prizeHTML + '<div class="card"><h2>👥 Players (' + f + '/' + (t.maxPlayers || 16) + ')</h2><div class="progress" style="margin:12px 0"><div style="width:' + Math.round(f / (t.maxPlayers || 16) * 100) + '%"></div></div>' + playerHTML + '</div></div></div>' + action;
 };
-
 window.openJ = function(tid) {
-  var t = getTid(tid);
-  var c = curC();
+  var t = getTid(tid); var c = curC();
   if (!c) return alert("Sign in first");
   var alr = (t.players || []).find(function(pl) { return pl.customerId === c.id; });
   if (alr) return alert("❌ Already! Your #: " + alr.id);
   var m = document.createElement("div");
   m.id = "jm"; m.className = "modal";
-  m.innerHTML = '<div class="sheet"><h2>Register · ' + t.name + '</h2><div class="s">' + t.game + '</div>' +
-    '<div class="notice gold" style="margin-bottom:14px">✅ As <b>' + c.name + '</b><br>ID: <b style="color:var(--gold-bright)">' + c.id + '</b></div>' +
-    '<label>Gamer Tag <span class="opt">(optional)</span></label><input id="jgt" maxlength="20">' +
-    '<label>Team Name <span class="opt">(optional)</span></label><input id="jtm" maxlength="20">' +
-    '<label style="display:flex;align-items:center;gap:10px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--txt);font-weight:600;margin-bottom:12px;cursor:pointer">' +
-      '<input type="checkbox" id="jagree" style="width:auto;margin:0;transform:scale(1.3);accent-color:var(--gold)"><span>I agree to the rules</span></label>' +
-    '<button class="btn pink" onclick="submitJ(\'' + tid + '\')">Confirm</button>' +
-    '<button class="btn dark" style="margin-top:8px" onclick="document.getElementById(\'jm\').remove()">Cancel</button></div>';
+  m.innerHTML = '<div class="sheet"><h2>Register · ' + t.name + '</h2><div class="s">' + t.game + '</div><div class="notice gold" style="margin-bottom:14px">✅ As <b>' + c.name + '</b><br>ID: <b style="color:var(--gold-bright)">' + c.id + '</b></div><label>Gamer Tag <span class="opt">(optional)</span></label><input id="jgt" maxlength="20"><label>Team Name <span class="opt">(optional)</span></label><input id="jtm" maxlength="20"><label style="display:flex;align-items:center;gap:10px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--txt);font-weight:600;margin-bottom:12px;cursor:pointer"><input type="checkbox" id="jagree" style="width:auto;margin:0;transform:scale(1.3);accent-color:var(--gold)"><span>I agree to the rules</span></label><button class="btn pink" onclick="submitJ(\'' + tid + '\')">Confirm</button><button class="btn dark" style="margin-top:8px" onclick="document.getElementById(\'jm\').remove()">Cancel</button></div>';
   document.body.appendChild(m);
 };
-
 window.submitJ = function(tid) {
-  var t = getTid(tid);
-  var c = curC();
+  var t = getTid(tid); var c = curC();
   if (!c) return;
   t.players = t.players || [];
   if (t.players.find(function(pl) { return pl.customerId === c.id; })) return alert("❌ Already");
@@ -745,8 +616,7 @@ window.submitJ = function(tid) {
   var gt = document.getElementById("jgt").value.trim();
   var tm = document.getElementById("jtm").value.trim();
   var num, tries = 0;
-  do { num = String(Math.floor(100 + Math.random() * 900)); tries++; if (tries > 500) break; }
-  while (t.players.find(function(pl) { return pl.id === num; }));
+  do { num = String(Math.floor(100 + Math.random() * 900)); tries++; if (tries > 500) break; } while (t.players.find(function(pl) { return pl.id === num; }));
   var pl = { id: num, name: c.name, gamerTag: gt, teamName: tm, method: "cash", paid: false, joinedAt: Date.now(), customerId: c.id };
   t.players.push(pl);
   upsertT(t);
@@ -754,40 +624,19 @@ window.submitJ = function(tid) {
   alert("✅ Registered!\n\nYour #: " + num);
   go("ticket", { tid: tid, pid: pl.id });
 };
-
 R.ticket = function(p) {
-  var t = getTid(p.tid);
-  if (!t) return R.tournaments();
+  var t = getTid(p.tid); if (!t) return R.tournaments();
   var pl = (t.players || []).find(function(x) { return x.id === p.pid; });
   if (!pl) return R.tournaments();
-  return '<div class="screen"><div class="wrap" style="max-width:460px">' +
-    '<div class="t-hero" style="border-radius:12px;padding:22px">' +
-      (t.bannerPic ? '<img src="' + t.bannerPic + '" style="width:100%;height:100px;object-fit:cover;border-radius:8px">' : '<div style="font-size:40px">' + (t.banner || "🎫") + '</div>') +
-      '<div style="color:var(--pink);font-size:11px;font-weight:700;letter-spacing:2px;margin-top:8px">OFFICIAL TICKET</div>' +
-      '<div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--txt)">' + t.name + '</div></div>' +
-    '<div class="id-card" style="margin-top:14px;padding:28px 20px"><div class="label">YOUR NUMBER</div><div class="idnum" style="font-size:70px;letter-spacing:8px">' + pl.id + '</div><div class="hint" style="color:var(--gold-bright);font-weight:700;margin-top:10px">' + pl.name + '</div></div>' +
-    '<div class="notice gold">💵 Pay entry at counter</div>' +
-    '<button class="btn dark" onclick="go(\'tournaments\')">← Back</button>' +
-  '</div></div>';
+  return '<div class="screen"><div class="wrap" style="max-width:460px"><div class="t-hero" style="border-radius:12px;padding:22px">' + (t.bannerPic ? '<img src="' + t.bannerPic + '" style="width:100%;height:100px;object-fit:cover;border-radius:8px">' : '<div style="font-size:40px">' + (t.banner || "🎫") + '</div>') + '<div style="color:var(--pink);font-size:11px;font-weight:700;letter-spacing:2px;margin-top:8px">OFFICIAL TICKET</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--txt)">' + t.name + '</div></div><div class="id-card" style="margin-top:14px;padding:28px 20px"><div class="label">YOUR NUMBER</div><div class="idnum" style="font-size:70px;letter-spacing:8px">' + pl.id + '</div><div class="hint" style="color:var(--gold-bright);font-weight:700;margin-top:10px">' + pl.name + '</div></div><div class="notice gold">💵 Pay entry at counter</div><button class="btn dark" onclick="go(\'tournaments\')">← Back</button></div></div>';
 };
-
 R.session = function(p) {
-  var s = getSess(p.id);
-  if (!s) return '<div class="screen"><div class="wrap"><h2>Not found</h2></div></div>';
+  var s = getSess(p.id); if (!s) return '<div class="screen"><div class="wrap"><h2>Not found</h2></div></div>';
   var playHTML = "";
-  if (s.status === "playing") {
-    playHTML = '<div class="card" style="text-align:center;padding:22px"><div style="color:var(--gold);font-size:11px;letter-spacing:2px;font-weight:700">' + (s.isMembership ? "MEMBERSHIP · TIME PLAYED" : "TIME REMAINING") + '</div><div class="timer-huge" id="stimer">--:--</div></div>';
-  } else {
-    playHTML = '<div class="notice">Status: ' + s.status + '</div>';
-  }
-  return '<div class="screen"><div class="wrap">' +
-    '<a href="javascript:go(\'mybookings\')" style="color:var(--muted);font-weight:600;font-size:13px">← Back</a>' +
-    '<h1 style="margin-top:20px">' + s.name + '</h1><p class="sub">' + s.id + '</p>' +
-    playHTML +
-    '<div class="card" style="margin-top:16px">' + (s.items || []).map(function(i) { return '<div style="padding:4px 0;color:#cbd5e1;font-size:14px">' + i + '</div>'; }).join("") + '</div>' +
-  '</div></div>';
+  if (s.status === "playing") playHTML = '<div class="card" style="text-align:center;padding:22px"><div style="color:var(--gold);font-size:11px;letter-spacing:2px;font-weight:700">' + (s.isMembership ? "MEMBERSHIP · TIME PLAYED" : "TIME REMAINING") + '</div><div class="timer-huge" id="stimer">--:--</div></div>';
+  else playHTML = '<div class="notice">Status: ' + s.status + '</div>';
+  return '<div class="screen"><div class="wrap"><a href="javascript:go(\'mybookings\')" style="color:var(--muted);font-weight:600;font-size:13px">← Back</a><h1 style="margin-top:20px">' + s.name + '</h1><p class="sub">' + s.id + '</p>' + playHTML + '<div class="card" style="margin-top:16px">' + (s.items || []).map(function(i) { return '<div style="padding:4px 0;color:#cbd5e1;font-size:14px">' + i + '</div>'; }).join("") + '</div></div></div>';
 };
-
 R.session.after = function(p) {
   var s = getSess(p.id);
   if (!s || s.status !== "playing" || !s.start) return;
@@ -797,8 +646,7 @@ R.session.after = function(p) {
     if (s.isMembership) {
       var p2 = Date.now() - s.start;
       el.textContent = String(Math.floor(p2 / 60000)).padStart(2, "0") + ":" + String(Math.floor((p2 % 60000) / 1000)).padStart(2, "0");
-      el.className = "timer-huge";
-      return;
+      el.className = "timer-huge"; return;
     }
     var l = s.end - Date.now();
     if (l <= 0) { el.textContent = "00:00"; el.className = "timer-huge over"; return; }
@@ -809,9 +657,6 @@ R.session.after = function(p) {
   setInterval(tick, 1000);
 };
 
-/* ============================================================
-   LIVE SYNC (bidirectional with admin)
-   ============================================================ */
 function showLiveBadge(msg) {
   var el = document.getElementById("live-badge");
   if (!el) {
@@ -824,14 +669,12 @@ function showLiveBadge(msg) {
   setTimeout(function() { el.style.transform = "translateX(-50%) translateY(0)"; }, 20);
   setTimeout(function() { el.style.transform = "translateX(-50%) translateY(-80px)"; }, 3000);
 }
-
 function isTypingInField() {
   var a = document.activeElement;
   if (!a) return false;
   var tag = (a.tagName || "").toLowerCase();
   return tag === "input" || tag === "textarea" || tag === "select";
 }
-
 function rtRefresh() {
   var wasTyping = isTypingInField();
   var wasInModal = !!document.querySelector(".modal");
@@ -846,57 +689,47 @@ function rtRefresh() {
     if (curR) render(curR, {});
   }).catch(function(e) { console.error("Live refresh failed:", e); });
 }
-
 function setupRealtime() {
   if (!sb) return;
   try { sb.removeAllChannels(); } catch(e) {}
   ["customers", "sessions", "tournaments", "requests", "addons"].forEach(function(t) {
     try {
-      sb.channel("live-" + t)
-        .on("postgres_changes", { event: "*", schema: "public", table: t }, function(payload) {
-          if (payload.eventType === "UPDATE" && t === "customers") {
-            var newRow = payload.new || {};
-            var me = curC();
-            if (me && newRow.id === me.id) {
-              if (newRow.activated && !me.activated) showLiveBadge("✅ Account activated!");
-              else if ((newRow.points || 0) !== (me.points || 0)) showLiveBadge("💰 Points updated");
-            }
+      sb.channel("live-" + t).on("postgres_changes", { event: "*", schema: "public", table: t }, function(payload) {
+        if (payload.eventType === "UPDATE" && t === "customers") {
+          var newRow = payload.new || {}; var me = curC();
+          if (me && newRow.id === me.id) {
+            if (newRow.activated && !me.activated) showLiveBadge("✅ Account activated!");
+            else if ((newRow.points || 0) !== (me.points || 0)) showLiveBadge("💰 Points updated");
           }
-          if (payload.eventType === "UPDATE" && t === "sessions") {
-            var row = payload.new || {};
-            var me2 = curC();
-            if (me2 && row.customer_id === me2.id) {
-              if (row.status === "playing" && row.start_time) showLiveBadge("🎮 Session started!");
-              else if (row.status === "ended") showLiveBadge("⏹ Session ended");
-              else if (row.status === "paid") showLiveBadge("💰 Payment received");
-            }
+        }
+        if (payload.eventType === "UPDATE" && t === "sessions") {
+          var row = payload.new || {}; var me2 = curC();
+          if (me2 && row.customer_id === me2.id) {
+            if (row.status === "playing" && row.start_time) showLiveBadge("🎮 Session started!");
+            else if (row.status === "ended") showLiveBadge("⏹ Session ended");
+            else if (row.status === "paid") showLiveBadge("💰 Payment received");
           }
-          if (payload.eventType === "UPDATE" && t === "requests") {
-            var rr = payload.new || {};
-            var me3 = curC();
-            if (me3 && rr.customer_id === me3.id) {
-              if (rr.status === "approved") showLiveBadge("✅ Order approved!");
-              else if (rr.status === "done") showLiveBadge("🍟 Order delivered!");
-              else if (rr.status === "rejected") showLiveBadge("❌ Order rejected");
-            }
+        }
+        if (payload.eventType === "UPDATE" && t === "requests") {
+          var rr = payload.new || {}; var me3 = curC();
+          if (me3 && rr.customer_id === me3.id) {
+            if (rr.status === "approved") showLiveBadge("✅ Order approved!");
+            else if (rr.status === "done") showLiveBadge("🍟 Order delivered!");
+            else if (rr.status === "rejected") showLiveBadge("❌ Order rejected");
           }
-          rtRefresh();
-        })
-        .subscribe();
+        }
+        rtRefresh();
+      }).subscribe();
     } catch(e) { console.error(e); }
   });
 }
 
-/* ============================================================
-   START
-   ============================================================ */
 (function() {
   var c = curC();
   if (c) { if (!c.activated) go("pending"); else go("home"); }
   else if (isGuest()) go("guest_home");
   else go("landing");
 })();
-
 loadAll().then(function() {
   if (curR) render(curR, {});
   setupRealtime();
