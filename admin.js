@@ -207,8 +207,7 @@ window.startAt = function(stId) {
     var options = all.slice(0, 20).map(function(s) { return { value: s.id, label: s.id + " — " + s.name + " (" + (s.paid ? "PAID" : "unpaid") + ")" }; });
     var st = STA.find(function(x) { return x.id === stId; });
     openSheet({
-      title: "▶ Start Session",
-      subtitle: "Station: " + (st ? st.name : ""),
+      title: "▶ Start Session", subtitle: "Station: " + (st ? st.name : ""),
       fields: [{ id: "sessid", label: "Pick a pending booking", type: "select", options: options, value: options[0].value }],
       confirmText: "▶ Start Now",
       onConfirm: function(vals) {
@@ -677,7 +676,7 @@ function forcePasswordReset(admin, isExpired) {
 }
 
 /* ============================================================
-   STAFF PROFILE — My Account
+   STAFF PROFILE
    ============================================================ */
 R.me = function() {
   var me = getMe();
@@ -715,7 +714,7 @@ R.me = function() {
 };
 
 /* ============================================================
-   STAFF ACCOUNTS — owner only
+   STAFF ACCOUNTS
    ============================================================ */
 R.admin_users = function() {
   if (!isOwner()) return R.denied();
@@ -903,12 +902,14 @@ function setupAdminRealtime() {
 if ("Notification" in window && Notification.permission === "default") {
   setTimeout(function() { Notification.requestPermission(); }, 3000);
 }
-(function() {
+
+document.getElementById("app").innerHTML = '<div class="screen"><div class="wrap"><div class="empty"><div class="big">⏳</div><div class="msg">LOADING</div></div></div></div>';
+loadAll().then(function() {
   if (!ADMINS.length) go("claim_owner");
   else if (isAdmin()) go("floor");
   else go("login");
-})();
-loadAll().then(function() {
-  if (curR) render(curR, {});
   setupAdminRealtime();
-}).catch(function(e) { console.error("Load failed:", e); });
+}).catch(function(e) {
+  console.error("Load failed:", e);
+  document.getElementById("app").innerHTML = '<div class="screen"><div class="wrap"><div class="empty"><div class="big">❌</div><div class="msg">CONNECTION FAILED</div><p style="color:var(--muted);margin-top:10px;font-size:13px">Could not reach database. Check your internet.</p><button class="btn" style="max-width:280px;margin:20px auto 0" onclick="location.reload()">Retry</button></div></div></div>';
+});
