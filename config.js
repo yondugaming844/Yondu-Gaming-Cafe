@@ -1,25 +1,16 @@
-/* ============================================================
-   YONDU GAMING CAFE — SHARED CONFIG & HELPERS
-   ============================================================ */
+/* YONDU CONFIG — edit this file to change prices, phone, snacks */
 
-/* ---- Supabase ---- */
 var SB_URL = "https://murcilacjeoemdgrfwpl.supabase.co";
 var SB_KEY = "sb_publishable_7exYurU_LMovVH8jHysPmg_YaY76aci";
 var sb = null;
 try { sb = window.supabase.createClient(SB_URL, SB_KEY); } catch(e) { console.error(e); }
 
-/* ---- Settings ---- */
-var RR = 20;                    // ₹20 = 1 point
-var POINTS_MAX = 10000;
-var POINTS_PER_HOUR = 1000;
-var REF_BONUS = 50;
-var BDAY_BONUS = 100;
+var RR = 20, POINTS_MAX = 10000, POINTS_PER_HOUR = 1000, REF_BONUS = 50, BDAY_BONUS = 100;
 var YEARS_MS = 365 * 24 * 60 * 60 * 1000;
 
-/* ⚠️ CHANGE THIS: your real café phone number */
+/* ⚠️ CHANGE YOUR PHONE NUMBER HERE */
 var CAFE_PHONE = "+91 90000 00000";
 
-/* ---- Defaults ---- */
 var STA_DEF = [
   { id: "ps5-1", name: "PS5 · 1" },
   { id: "ps5-2", name: "PS5 · 2" },
@@ -55,10 +46,8 @@ var CAFE_INFO = {
   phone: CAFE_PHONE
 };
 
-/* ---- Global state ---- */
 var CUST = [], SESS = [], TOURN = [], REQ = [], STA = [], EXP = [], ADD = [], ADMINS = [];
 
-/* ---- Pin hashing ---- */
 function hashPin(p) {
   var h = 5381, s = "ysalt" + p + "ysalt";
   for (var i = 0; i < s.length; i++) h = ((h << 5) + h) + s.charCodeAt(i);
@@ -66,33 +55,6 @@ function hashPin(p) {
 }
 function checkPin(p, h) { return hashPin(p) === h; }
 
-/* ---- Time formatting ---- */
-function fmtTime(t) {
-  if (!t) return "--";
-  var p = String(t).split(":");
-  var hh = parseInt(p[0], 10);
-  var ap = hh >= 12 ? "PM" : "AM";
-  var h12 = hh % 12 || 12;
-  return h12 + ":" + p[1] + " " + ap;
-}
-function fmtDateTime(ts) {
-  if (!ts) return "--";
-  return new Date(Number(ts)).toLocaleString("en-IN", {
-    day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit"
-  });
-}
-function money(n) { return "₹" + (Number(n) || 0).toLocaleString("en-IN"); }
-function esc(s) {
-  return String(s == null ? "" : s).replace(/[&<>"']/g, function(c) {
-    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
-  });
-}
-
-/* ---- Social URLs ---- */
-function getGR() { return localStorage.getItem("yondu_google_review") || "https://g.page"; }
-function getIG() { return localStorage.getItem("yondu_instagram") || "https://instagram.com/yondugamingcafe"; }
-
-/* ---- Image resize ---- */
 function readImageFile(file, cb) {
   if (!file) return cb(null);
   if (!file.type || file.type.indexOf("image/") !== 0) { alert("Please choose an image file"); return cb(null); }
@@ -108,8 +70,7 @@ function readImageFile(file, cb) {
       var cvs = document.createElement("canvas");
       cvs.width = w; cvs.height = h;
       cvs.getContext("2d").drawImage(img, 0, 0, w, h);
-      try { cb(cvs.toDataURL("image/jpeg", 0.8)); }
-      catch(err) { console.error(err); cb(null); }
+      try { cb(cvs.toDataURL("image/jpeg", 0.8)); } catch(err) { cb(null); }
     };
     img.onerror = function() { alert("Could not read image"); cb(null); };
     img.src = e.target.result;
@@ -118,14 +79,33 @@ function readImageFile(file, cb) {
   reader.readAsDataURL(file);
 }
 
-/* ---- Local storage helpers ---- */
+function fmtTime(t) {
+  if (!t) return "--";
+  var p = String(t).split(":");
+  var hh = parseInt(p[0], 10);
+  var ap = hh >= 12 ? "PM" : "AM";
+  var h12 = hh % 12 || 12;
+  return h12 + ":" + p[1] + " " + ap;
+}
+function fmtDateTime(ts) {
+  if (!ts) return "--";
+  return new Date(Number(ts)).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+function money(n) { return "₹" + (Number(n) || 0).toLocaleString("en-IN"); }
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function(c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+function getGR() { return localStorage.getItem("yondu_google_review") || "https://g.page"; }
+function getIG() { return localStorage.getItem("yondu_instagram") || "https://instagram.com/yondugamingcafe"; }
+
 var DB = {
   get: function(k, d) { try { var s = localStorage.getItem(k); return s ? JSON.parse(s) : d; } catch(e) { return d; } },
   set: function(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} },
   del: function(k) { try { localStorage.removeItem(k); } catch(e) {} }
 };
 
-/* ---- Normalizers ---- */
 function normC(r) {
   return { id: r.id, name: r.name, phone: r.phone || "", birthday: r.birthday || "",
     pinHash: r.pin_hash, points: r.points || 0, pointsSpent: r.points_spent || 0,
@@ -174,27 +154,21 @@ function normT(r) {
   try { p = JSON.parse(r.players || "[]"); } catch(e) {}
   try { b = JSON.parse(r.bracket || "[]"); } catch(e) {}
   try { w = JSON.parse(r.winners || "[]"); } catch(e) {}
-  return { id: r.id, name: r.name, game: r.game,
-    date: r.date || "", time: (r.time || "").slice(0, 5),
-    entryFee: r.entry_fee || 0, maxPlayers: r.max_players || 16,
-    winnersCount: r.winners_count || 3, banner: r.banner || "🏆",
-    bannerPic: r.banner_pic || "", description: r.description || "",
+  return { id: r.id, name: r.name, game: r.game, date: r.date || "", time: (r.time || "").slice(0, 5),
+    entryFee: r.entry_fee || 0, maxPlayers: r.max_players || 16, winnersCount: r.winners_count || 3,
+    banner: r.banner || "🏆", bannerPic: r.banner_pic || "", description: r.description || "",
     prize1: r.prize1 || "", prize2: r.prize2 || "", prize3: r.prize3 || "", prize4: r.prize4 || "",
     rules: r.rules || "", status: r.status || "open",
-    players: p, bracket: b, winners: w, winner: r.winner || null,
-    createdAt: r.created_at || Date.now() };
+    players: p, bracket: b, winners: w, winner: r.winner || null, createdAt: r.created_at || Date.now() };
 }
 function denormT(t) {
-  return { id: t.id, name: t.name, game: t.game,
-    date: t.date || null, time: t.time || null,
-    entry_fee: t.entryFee || 0, max_players: t.maxPlayers || 16,
-    winners_count: t.winnersCount || 3, banner: t.banner || "🏆",
-    banner_pic: t.bannerPic || null, description: t.description || null,
+  return { id: t.id, name: t.name, game: t.game, date: t.date || null, time: t.time || null,
+    entry_fee: t.entryFee || 0, max_players: t.maxPlayers || 16, winners_count: t.winnersCount || 3,
+    banner: t.banner || "🏆", banner_pic: t.bannerPic || null, description: t.description || null,
     prize1: t.prize1 || null, prize2: t.prize2 || null, prize3: t.prize3 || null, prize4: t.prize4 || null,
     rules: t.rules || null, status: t.status || "open",
     players: JSON.stringify(t.players || []), bracket: JSON.stringify(t.bracket || []),
-    winners: JSON.stringify(t.winners || []), winner: t.winner || null,
-    created_at: t.createdAt || Date.now() };
+    winners: JSON.stringify(t.winners || []), winner: t.winner || null, created_at: t.createdAt || Date.now() };
 }
 function normE(r) {
   var prices = {}, durs = null;
@@ -208,8 +182,7 @@ function normReq(r) {
   return { id: r.id, type: r.type, customerId: r.customer_id, sessionId: r.session_id,
     customerName: r.customer_name, items: items,
     total: r.total || 0, pointsUsed: r.points_used || 0, minutes: r.minutes || 0,
-    status: r.status || "pending", note: r.note || "",
-    createdAt: r.created_at || 0, processedAt: r.processed_at || 0 };
+    status: r.status || "pending", note: r.note || "", createdAt: r.created_at || 0, processedAt: r.processed_at || 0 };
 }
 function denormReq(r) {
   return { id: r.id, type: r.type, customer_id: r.customerId, session_id: r.sessionId || null,
@@ -227,7 +200,6 @@ function denormA(a) {
   return { username: a.username, pass_hash: a.passHash, role: a.role || "admin", perms: JSON.stringify(a.perms || []), created_at: a.createdAt || Date.now() };
 }
 
-/* ---- Sync table to Supabase ---- */
 function syncTable(table, newArr, oldArr, denorm) {
   if (!sb) return;
   var oldMap = {};
@@ -239,15 +211,10 @@ function syncTable(table, newArr, oldArr, denorm) {
   var newIds = {};
   newArr.forEach(function(x) { newIds[x.id] = true; });
   var toDel = oldArr.filter(function(x) { return !newIds[x.id]; }).map(function(x) { return x.id; });
-  if (toUpsert.length) {
-    sb.from(table).upsert(toUpsert).then(function(res) { if (res.error) console.error(res.error); });
-  }
-  if (toDel.length) {
-    sb.from(table).delete().in("id", toDel).then(function(res) { if (res.error) console.error(res.error); });
-  }
+  if (toUpsert.length) sb.from(table).upsert(toUpsert).then(function(res) { if (res.error) console.error(res.error); });
+  if (toDel.length) sb.from(table).delete().in("id", toDel).then(function(res) { if (res.error) console.error(res.error); });
 }
 
-/* ---- Load all data ---- */
 function loadAll() {
   if (!sb) return Promise.reject(new Error("No Supabase"));
   return Promise.all([
@@ -276,7 +243,6 @@ function loadAll() {
   });
 }
 
-/* ---- Save helpers ---- */
 function saveC(a) { var old = CUST; CUST = a; syncTable("customers", a, old, denormC); }
 function saveS(a) { var old = SESS; SESS = a; syncTable("sessions", a, old, denormS); }
 function saveT(a) { var old = TOURN; TOURN = a; syncTable("tournaments", a, old, denormT); }
@@ -308,7 +274,6 @@ function saveAdmins(arr) {
   }).catch(function(e) { console.error(e); });
 }
 
-/* ---- IDs ---- */
 function newCID() {
   for (var i = 0; i < 200; i++) {
     var id = String(Math.floor(100000 + Math.random() * 900000));
@@ -326,8 +291,6 @@ function dursOf(id) {
   var e = EXP.find(function(x) { return x.id === id; });
   return e && e.durs ? e.durs : [30, 60, 120, 180];
 }
-
-/* ---- Expiry / Badges / Birthday ---- */
 function checkExpiry(c) {
   var now = Date.now(), last = c.lastActivity || c.createdAt;
   if (now - last > YEARS_MS) {
