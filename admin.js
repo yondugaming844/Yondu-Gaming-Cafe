@@ -1,19 +1,9 @@
-/* ============================================================
-   YONDU ADMIN PANEL
-   ============================================================ */
+/* YONDU ADMIN PANEL */
 
-var tab = "dash";
-var search = "";
-var loggedIn = false;
-
+var curR = "", bk = null, tab = "dash";
 var ALL_PERMS = ["floor","pay","requests","customers","menu","tournaments","reports","settings"];
-var PERM_LABELS = {
-  floor: "🏠 Live Floor", pay: "💳 Payments", requests: "🔔 Requests",
-  customers: "👥 Customers", menu: "🍟 Menu Manager", tournaments: "🏆 Tournaments",
-  reports: "📊 Reports", settings: "⚙ Settings"
-};
+var PERM_LABELS = { floor: "🏠 Live Floor", pay: "💳 Payments", requests: "🔔 Requests", customers: "👥 Customers", menu: "🍟 Menu", tournaments: "🏆 Tournaments", reports: "📊 Reports", settings: "⚙ Settings" };
 
-/* ---- Admin auth ---- */
 function adminSession() { return DB.get("yondu_admin_session", null); }
 function getMe() {
   var u = adminSession();
@@ -29,7 +19,6 @@ function can(p) {
 }
 function isOwner() { var m = getMe(); return m && m.role === "owner"; }
 
-/* ---- Real-time notification ---- */
 function notifyAdmin(msg) {
   var el = document.createElement("div");
   el.style.cssText = "position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:linear-gradient(135deg,#c9a961,#e8d5a3);color:#111;padding:14px 24px;border-radius:12px;font-weight:800;z-index:9999;box-shadow:0 12px 40px rgba(0,0,0,.7);font-size:14px;max-width:90%;text-align:center;transition:transform .4s cubic-bezier(.2,.9,.3,1.3)";
@@ -58,9 +47,7 @@ function notifyAdmin(msg) {
   if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
 }
 
-/* ---- Router ---- */
 var R = {};
-var curR = "";
 function go(r, p) { curR = r; window.scrollTo(0, 0); render(r, p || {}); }
 window.go = go;
 
@@ -74,7 +61,6 @@ function render(r, p) {
   renderNav(r);
   if (R[r] && R[r].after) R[r].after(p);
 }
-
 function renderNav(r) {
   var nav = document.getElementById("nav");
   if (!isAdmin() || r === "login" || r === "claim_owner") { nav.style.display = "none"; return; }
@@ -91,24 +77,11 @@ function renderNav(r) {
   nav.innerHTML = links;
 }
 
-R.denied = function() {
-  return '<div class="screen"><div class="wrap"><div class="empty"><div class="big">🔒</div><div class="msg">ACCESS DENIED</div><p style="margin-top:10px;font-size:13px">No permission.</p></div><button class="btn" style="max-width:280px;margin:20px auto 0" onclick="go(\'more\')">← Back</button></div></div>';
-};
+R.denied = function() { return '<div class="screen"><div class="wrap"><div class="empty"><div class="big">🔒</div><div class="msg">ACCESS DENIED</div></div><button class="btn" style="max-width:280px;margin:20px auto 0" onclick="go(\'more\')">← Back</button></div></div>'; };
 
 R.claim_owner = function() {
-  return '<div class="screen"><div class="wrap" style="max-width:420px;margin:40px auto">' +
-    '<div style="text-align:center;margin-bottom:24px"><div class="brand-icon" style="margin:0 auto 14px;width:70px;height:70px"></div>' +
-    '<h1 style="font-size:22px;text-align:center;color:var(--gold)">CLAIM OWNER</h1>' +
-    '<p style="color:var(--muted);font-size:12px;text-align:center;margin-top:6px">First-time setup</p></div>' +
-    '<div class="notice gold">👑 First admin becomes Owner with full control.</div>' +
-    '<label>Username</label><input id="oau" placeholder="vikesh" autocomplete="off" style="text-transform:lowercase">' +
-    '<label>Password <span class="opt">min 6 chars</span></label><input id="oap" type="password" autocomplete="new-password">' +
-    '<label>Confirm Password</label><input id="oap2" type="password" autocomplete="new-password">' +
-    '<button class="btn" onclick="claimOwner()">Create Owner</button>' +
-    '<button class="btn dark" style="margin-top:8px" onclick="window.location.href=\'index.html\'">← Back to App</button>' +
-  '</div></div>';
+  return '<div class="screen"><div class="wrap" style="max-width:420px;margin:40px auto"><div style="text-align:center;margin-bottom:24px"><div class="brand-icon" style="margin:0 auto 14px;width:70px;height:70px"></div><h1 style="font-size:22px;text-align:center;color:var(--gold)">CLAIM OWNER</h1><p style="color:var(--muted);font-size:12px;text-align:center;margin-top:6px">First-time setup</p></div><div class="notice gold">👑 First admin becomes Owner with full control.</div><label>Username</label><input id="oau" placeholder="owner" autocomplete="off" style="text-transform:lowercase"><label>Password <span class="opt">min 6 chars</span></label><input id="oap" type="password" autocomplete="new-password"><label>Confirm Password</label><input id="oap2" type="password" autocomplete="new-password"><button class="btn" onclick="claimOwner()">Create Owner</button><button class="btn dark" style="margin-top:8px" onclick="window.location.href=\'index.html\'">← Back to App</button></div></div>';
 };
-
 window.claimOwner = function() {
   var u = document.getElementById("oau").value.trim().toLowerCase();
   var p = document.getElementById("oap").value;
@@ -130,17 +103,8 @@ window.claimOwner = function() {
 };
 
 R.login = function() {
-  return '<div class="screen"><div class="wrap" style="max-width:420px;margin:40px auto">' +
-    '<div style="text-align:center;margin-bottom:24px"><div class="brand-icon" style="margin:0 auto 14px;width:70px;height:70px"></div>' +
-    '<h1 style="font-size:22px;text-align:center;color:var(--gold)">YONDU</h1>' +
-    '<p style="color:var(--muted);font-size:12px;letter-spacing:3px;margin-top:4px">ADMIN PANEL</p></div>' +
-    '<label>Username</label><input id="au" placeholder="username" autocomplete="username" style="text-transform:lowercase">' +
-    '<label>Password</label><input id="ap" type="password" placeholder="••••••" autocomplete="current-password">' +
-    '<button class="btn" style="margin-top:8px" onclick="doLogin()">Sign In</button>' +
-    '<button class="btn dark" style="margin-top:8px" onclick="window.location.href=\'index.html\'">← Back to App</button>' +
-  '</div></div>';
+  return '<div class="screen"><div class="wrap" style="max-width:420px;margin:40px auto"><div style="text-align:center;margin-bottom:24px"><div class="brand-icon" style="margin:0 auto 14px;width:70px;height:70px"></div><h1 style="font-size:22px;text-align:center;color:var(--gold)">YONDU</h1><p style="color:var(--muted);font-size:12px;letter-spacing:3px;margin-top:4px">ADMIN PANEL</p></div><label>Username</label><input id="au" placeholder="username" autocomplete="username" style="text-transform:lowercase"><label>Password</label><input id="ap" type="password" placeholder="••••••" autocomplete="current-password"><button class="btn" style="margin-top:8px" onclick="doLogin()">Sign In</button><button class="btn dark" style="margin-top:8px" onclick="window.location.href=\'index.html\'">← Back to App</button></div></div>';
 };
-
 window.doLogin = function() {
   var u = document.getElementById("au").value.trim().toLowerCase();
   var p = document.getElementById("ap").value;
@@ -153,14 +117,12 @@ window.doLogin = function() {
     go("floor");
   });
 };
-
 window.doLogout = function() {
   if (!confirm("Sign out?")) return;
   DB.del("yondu_admin_session");
   go("login");
 };
 
-/* ---- Live Floor ---- */
 R.floor = function() {
   if (!can("floor")) return R.denied();
   var now = Date.now();
@@ -182,33 +144,13 @@ R.floor = function() {
       var cls = s.isMembership ? "" : (l < 5 * 60000 ? "over" : l < 15 * 60000 ? "warn" : "");
       var elapsed = s.isMembership && s.start ? Date.now() - s.start : 0;
       var eM = Math.floor(elapsed / 60000), eS = Math.floor((elapsed % 60000) / 1000);
-      var display = s.isMembership
-        ? String(eM).padStart(2, "0") + ":" + String(eS).padStart(2, "0")
-        : String(m).padStart(2, "0") + ":" + String(sec).padStart(2, "0");
-      return '<div class="station playing" onclick="go(\'station\',{id:\'' + st.id + '\'})">' +
-        '<div class="st-h"><div class="st-nm">' + st.name + '</div><span class="pill busy">' + (s.isMembership ? "🎫 MEMBERSHIP" : "● PLAYING") + '</span></div>' +
-        '<div class="status">' + s.name + ' · ' + s.items.join(" · ") + '</div>' +
-        '<div class="time ' + cls + '" data-s="' + s.id + '">' + display + '</div></div>';
+      var display = s.isMembership ? String(eM).padStart(2, "0") + ":" + String(eS).padStart(2, "0") : String(m).padStart(2, "0") + ":" + String(sec).padStart(2, "0");
+      return '<div class="station playing" onclick="go(\'station\',{id:\'' + st.id + '\'})"><div class="st-h"><div class="st-nm">' + st.name + '</div><span class="pill busy">' + (s.isMembership ? "🎫 MEMBERSHIP" : "● PLAYING") + '</span></div><div class="status">' + s.name + ' · ' + s.items.join(" · ") + '</div><div class="time ' + cls + '" data-s="' + s.id + '">' + display + '</div></div>';
     }
-    return '<div class="station free" onclick="startAt(\'' + st.id + '\')">' +
-      '<div class="st-h"><div class="st-nm">' + st.name + '</div><span class="pill free">● FREE</span></div>' +
-      '<div class="status">Ready · tap to start</div></div>';
+    return '<div class="station free" onclick="startAt(\'' + st.id + '\')"><div class="st-h"><div class="st-nm">' + st.name + '</div><span class="pill free">● FREE</span></div><div class="status">Ready · tap to start</div></div>';
   }).join("");
-  return '<div class="screen"><div class="wrap">' +
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">' +
-      '<div><h1 style="font-size:22px;margin:0">Live Floor</h1><p class="sub" style="margin:4px 0 0">' + playing.length + ' playing · ' + todaySess.length + ' today</p></div>' +
-      '<button class="btn sm" onclick="go(\'newsale\')">+ Sale</button></div>' +
-    ((pend + pendReq) > 0 ? '<div class="notice orange" onclick="go(\'requests\')" style="cursor:pointer">🔔 <b>' + pend + ' activation' + (pend !== 1 ? "s" : "") + '</b> · <b>' + pendReq + ' request' + (pendReq !== 1 ? "s" : "") + '</b> → tap to open</div>' : "") +
-    '<div class="grid4" style="margin-bottom:16px">' +
-      '<div class="stat"><div class="v">₹' + todayRev + '</div><div class="l">Today ₹</div></div>' +
-      '<div class="stat"><div class="v" style="color:var(--cyan)">' + playing.length + '</div><div class="l">Playing</div></div>' +
-      '<div class="stat"><div class="v" style="color:var(--pink)">' + collect + '</div><div class="l">Collect</div></div>' +
-      '<div class="stat"><div class="v" style="color:var(--green)">' + pend + '</div><div class="l">Pending</div></div>' +
-    '</div>' +
-    '<div class="sec-label">Stations</div>' + stations +
-  '</div></div>';
+  return '<div class="screen"><div class="wrap"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div><h1 style="font-size:22px;margin:0">Live Floor</h1><p class="sub" style="margin:4px 0 0">' + playing.length + ' playing · ' + todaySess.length + ' today</p></div><button class="btn sm" onclick="go(\'newsale\')">+ Sale</button></div>' + ((pend + pendReq) > 0 ? '<div class="notice orange" onclick="go(\'requests\')" style="cursor:pointer">🔔 <b>' + pend + ' activation' + (pend !== 1 ? "s" : "") + '</b> · <b>' + pendReq + ' request' + (pendReq !== 1 ? "s" : "") + '</b> → tap to open</div>' : "") + '<div class="grid4" style="margin-bottom:16px"><div class="stat"><div class="v">₹' + todayRev + '</div><div class="l">Today ₹</div></div><div class="stat"><div class="v" style="color:var(--cyan)">' + playing.length + '</div><div class="l">Playing</div></div><div class="stat"><div class="v" style="color:var(--pink)">' + collect + '</div><div class="l">Collect</div></div><div class="stat"><div class="v" style="color:var(--green)">' + pend + '</div><div class="l">Pending</div></div></div><div class="sec-label">Stations</div>' + stations + '</div></div>';
 };
-
 R.floor.after = function() {
   setInterval(function() {
     if (curR !== "floor") return;
@@ -229,7 +171,6 @@ R.floor.after = function() {
     });
   }, 1000);
 };
-
 window.startAt = function(stId) {
   loadAll().then(function() {
     var pend = SESS.filter(function(s) { return !s.stationId && s.status !== "ended" && s.paid && s.expId !== "snacks"; });
@@ -256,26 +197,8 @@ R.station = function(p) {
   if (!st) return '<div class="screen"><div class="wrap"><h2>Not found</h2><button class="btn" onclick="go(\'floor\')">Back</button></div></div>';
   if (!s) return '<div class="screen"><div class="wrap"><a href="javascript:go(\'floor\')" style="color:var(--muted);font-size:13px">← Floor</a><h1 style="margin-top:20px">' + st.name + '</h1><div class="notice">Station free</div><button class="btn" onclick="go(\'floor\')">Back</button></div></div>';
   var c = s.customerId ? CUST.find(function(x) { return x.id === s.customerId; }) : null;
-  return '<div class="screen"><div class="wrap">' +
-    '<a href="javascript:go(\'floor\')" style="color:var(--muted);font-size:13px">← Floor</a>' +
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px;margin-bottom:10px">' +
-      '<div><h1 style="font-size:22px;margin:0">' + st.name + '</h1><p class="sub" style="margin:4px 0 0">' + s.name + (c ? " · " + c.id : "") + '</p></div>' +
-      '<span class="pill busy">' + (s.isMembership ? "🎫 MEMBERSHIP" : "● PLAYING") + '</span></div>' +
-    '<div class="card" style="text-align:center;padding:24px"><div style="color:var(--gold);font-size:11px;letter-spacing:2px;font-weight:700">' + (s.isMembership ? "MEMBERSHIP · TIME PLAYED" : "TIME REMAINING") + '</div><div class="timer-huge" id="ast">--:--</div></div>' +
-    (c ? '<div class="card" style="display:flex;gap:12px;align-items:center;padding:12px">' +
-      (c.profilePic ? '<div class="avatar" style="background-image:url(\'' + c.profilePic + '\')"></div>' : '<div class="avatar">' + c.name.charAt(0).toUpperCase() + '</div>') +
-      '<div style="flex:1"><div style="font-weight:700">' + c.name + '</div><div style="color:var(--cyan);font-size:13px;font-weight:700;letter-spacing:1.5px">' + c.id + '</div></div>' +
-      '<div style="text-align:right"><div style="color:var(--gold);font-size:10px;font-weight:700">POINTS</div><div style="font-size:20px;font-weight:800;color:var(--gold-bright)">' + c.points + '</div></div></div>' : "") +
-    '<div class="sec-label">Items</div><div class="card">' + (s.items || []).map(function(i) { return '<div style="padding:4px 0;font-size:14px;color:#cbd5e1">' + i + '</div>'; }).join("") +
-      (s.total > 0 ? '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:10px;display:flex;justify-content:space-between;font-weight:800"><span>Total</span><span style="color:var(--gold-bright)">₹' + s.total + '</span></div>' : "") + '</div>' +
-    '<div class="sec-label">Actions</div>' +
-    '<button class="btn dark" onclick="aAdd(\'' + s.id + '\')">🍟 Add Snacks</button>' +
-    (!s.isMembership ? '<button class="btn dark" style="margin-top:8px" onclick="aExt(\'' + s.id + '\')">⏱ Add Time</button>' : "") +
-    '<button class="btn orange" style="margin-top:8px" onclick="aEnd(\'' + s.id + '\')">⏹ ' + (s.isMembership ? "Stop & Deduct" : "End") + '</button>' +
-    '<button class="btn danger" style="margin-top:8px;background:#7f1d1d" onclick="delSess(\'' + s.id + '\')">🗑 Delete</button>' +
-  '</div></div>';
+  return '<div class="screen"><div class="wrap"><a href="javascript:go(\'floor\')" style="color:var(--muted);font-size:13px">← Floor</a><div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px;margin-bottom:10px"><div><h1 style="font-size:22px;margin:0">' + st.name + '</h1><p class="sub" style="margin:4px 0 0">' + s.name + (c ? " · " + c.id : "") + '</p></div><span class="pill busy">' + (s.isMembership ? "🎫 MEMBERSHIP" : "● PLAYING") + '</span></div><div class="card" style="text-align:center;padding:24px"><div style="color:var(--gold);font-size:11px;letter-spacing:2px;font-weight:700">' + (s.isMembership ? "MEMBERSHIP · TIME PLAYED" : "TIME REMAINING") + '</div><div class="timer-huge" id="ast">--:--</div></div>' + (c ? '<div class="card" style="display:flex;gap:12px;align-items:center;padding:12px">' + (c.profilePic ? '<div class="avatar" style="background-image:url(\'' + c.profilePic + '\')"></div>' : '<div class="avatar">' + c.name.charAt(0).toUpperCase() + '</div>') + '<div style="flex:1"><div style="font-weight:700">' + c.name + '</div><div style="color:var(--cyan);font-size:13px;font-weight:700;letter-spacing:1.5px">' + c.id + '</div></div><div style="text-align:right"><div style="color:var(--gold);font-size:10px;font-weight:700">POINTS</div><div style="font-size:20px;font-weight:800;color:var(--gold-bright)">' + c.points + '</div></div></div>' : "") + '<div class="sec-label">Items</div><div class="card">' + (s.items || []).map(function(i) { return '<div style="padding:4px 0;font-size:14px;color:#cbd5e1">' + i + '</div>'; }).join("") + (s.total > 0 ? '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:10px;display:flex;justify-content:space-between;font-weight:800"><span>Total</span><span style="color:var(--gold-bright)">₹' + s.total + '</span></div>' : "") + '</div><div class="sec-label">Actions</div><button class="btn dark" onclick="aAdd(\'' + s.id + '\')">🍟 Add Snacks</button>' + (!s.isMembership ? '<button class="btn dark" style="margin-top:8px" onclick="aExt(\'' + s.id + '\')">⏱ Add Time</button>' : "") + '<button class="btn orange" style="margin-top:8px" onclick="aEnd(\'' + s.id + '\')">⏹ ' + (s.isMembership ? "Stop & Deduct" : "End") + '</button><button class="btn danger" style="margin-top:8px;background:#7f1d1d" onclick="delSess(\'' + s.id + '\')">🗑 Delete</button></div></div>';
 };
-
 R.station.after = function(p) {
   var s = SESS.find(function(x) { return x.stationId === p.id && x.status === "playing"; });
   if (!s) return;
@@ -293,7 +216,8 @@ R.station.after = function(p) {
     el.textContent = String(Math.floor(l / 60000)).padStart(2, "0") + ":" + String(Math.floor((l % 60000) / 1000)).padStart(2, "0");
     el.className = "timer-huge" + (l < 5 * 60000 ? " over" : l < 15 * 60000 ? " warn" : "");
   };
-  tick(); setInterval(tick, 1000);
+  tick();
+  setInterval(tick, 1000);
 };
 
 window.aAdd = function(sid) {
@@ -306,25 +230,10 @@ window.aAdd = function(sid) {
     if (!s2) return;
     s2.items.push(name); s2.total += price;
     upsertS(s2);
-    if (s2.customerId) {
-      var c = CUST.find(function(x) { return x.id === s2.customerId; });
-      if (c) {
-        var e = Math.floor(price / RR);
-        c.points = Math.min(POINTS_MAX, (c.points || 0) + e);
-        c.pointsSpent = (c.pointsSpent || 0) + e;
-        c.totalSpent += price;
-        c.lastActivity = Date.now();
-        var arr = CUST.slice();
-        var i = arr.findIndex(function(x) { return x.id === c.id; });
-        if (i >= 0) arr[i] = c;
-        saveC(arr);
-      }
-    }
     alert("✅ Added ₹" + price);
     render("station", { id: s2.stationId });
   });
 };
-
 window.aExt = function(sid) {
   var add = parseInt(prompt("Add minutes?", "30"));
   if (!add) return;
@@ -338,50 +247,22 @@ window.aExt = function(sid) {
     s2.minutes = (s2.minutes || 0) + add;
     s2.total += amt;
     upsertS(s2);
-    if (s2.customerId) {
-      var c = CUST.find(function(x) { return x.id === s2.customerId; });
-      if (c) {
-        var e = Math.floor(amt / RR);
-        c.points = Math.min(POINTS_MAX, (c.points || 0) + e);
-        c.pointsSpent = (c.pointsSpent || 0) + e;
-        c.totalSpent += amt;
-        var arr = CUST.slice();
-        var i = arr.findIndex(function(x) { return x.id === c.id; });
-        if (i >= 0) arr[i] = c;
-        saveC(arr);
-      }
-    }
     alert("✅ +" + add + "min · ₹" + amt);
     render("station", { id: s2.stationId });
   });
 };
-
 window.aEnd = function(sid) {
   loadAll().then(function() {
     var s2 = getSess(sid);
     if (!s2) return;
-    var c = s2.customerId ? CUST.find(function(x) { return x.id === s2.customerId; }) : null;
     var played = Math.max(0, Math.floor((Date.now() - (s2.start || Date.now())) / 60000));
-    if (s2.isMembership && c) {
-      var hrs = Math.max(0.25, Math.ceil(played / 15) / 4);
-      var isRace = s2.expId === "racing";
-      if (isRace) c.raceHours = Math.max(0, (c.raceHours || 0) - hrs);
-      else c.ps5Hours = Math.max(0, (c.ps5Hours || 0) - hrs);
-      var arr = CUST.slice();
-      var i = arr.findIndex(function(x) { return x.id === c.id; });
-      if (i >= 0) arr[i] = c;
-      saveC(arr);
-      if (!confirm("Stop session?\n\nPlayed: " + played + " min\nDeducting: " + hrs.toFixed(2) + "h")) return;
-    } else {
-      if (!confirm("End session?\n\nPlayed: " + played + " min\nTotal: ₹" + s2.total)) return;
-    }
+    if (!confirm("End session?\n\nPlayed: " + played + " min\nTotal: ₹" + s2.total)) return;
     s2.status = "ended";
     upsertS(s2);
     alert("✅ Ended");
     go("floor");
   });
 };
-
 window.delSess = function(sid) {
   if (!confirm("Delete session?")) return;
   loadAll().then(function() {
@@ -390,7 +271,6 @@ window.delSess = function(sid) {
   });
 };
 
-/* ---- Payments ---- */
 R.payments = function() {
   if (!can("pay")) return R.denied();
   var up = SESS.filter(function(s) { return !s.paid && s.status !== "ended" && !s.stationId; });
@@ -398,24 +278,10 @@ R.payments = function() {
   var all = col.concat(up);
   var cards = all.length ? all.map(function(s) {
     var c = s.customerId ? CUST.find(function(x) { return x.id === s.customerId; }) : null;
-    return '<div class="card"' + (s.stationId && !s.paid ? ' style="border:2px solid var(--orange);background:#1a1207"' : '') + '>' +
-      '<div style="display:flex;justify-content:space-between;margin-bottom:8px">' +
-        '<div><div style="font-weight:800;font-size:15px">' + s.name + '</div>' +
-          (c ? '<div style="color:var(--cyan);font-size:12px;font-weight:700;letter-spacing:1.5px;margin-top:2px">' + c.id + '</div>' : "") +
-          '<div style="color:var(--muted);font-size:13px;margin-top:4px">' + s.items.join(" · ") + '</div></div>' +
-        '<span class="badge ' + s.method + '">' + s.method.toUpperCase() + '</span></div>' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">' +
-        '<div><div style="font-size:24px;font-weight:800;color:var(--gold-bright)">₹' + s.total + '</div></div>' +
-        '<div style="display:flex;gap:6px">' +
-          '<button class="btn danger xs" onclick="delSess(\'' + s.id + '\')">🗑</button>' +
-          '<button class="btn sm" onclick="collect(\'' + s.id + '\')">Collect</button></div></div></div>';
+    return '<div class="card"' + (s.stationId && !s.paid ? ' style="border:2px solid var(--orange);background:#1a1207"' : "") + '><div style="display:flex;justify-content:space-between;margin-bottom:8px"><div><div style="font-weight:800;font-size:15px">' + s.name + '</div>' + (c ? '<div style="color:var(--cyan);font-size:12px;font-weight:700;letter-spacing:1.5px;margin-top:2px">' + c.id + '</div>' : "") + '<div style="color:var(--muted);font-size:13px;margin-top:4px">' + s.items.join(" · ") + '</div></div><span class="badge ' + s.method + '">' + s.method.toUpperCase() + '</span></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"><div><div style="font-size:24px;font-weight:800;color:var(--gold-bright)">₹' + s.total + '</div></div><div style="display:flex;gap:6px"><button class="btn danger xs" onclick="delSess(\'' + s.id + '\')">🗑</button><button class="btn sm" onclick="collect(\'' + s.id + '\')">Collect</button></div></div></div>';
   }).join("") : '<div class="empty"><div class="big">✓</div><div class="msg">ALL CLEAR</div></div>';
-  return '<div class="screen"><div class="wrap">' +
-    '<h1 style="font-size:22px">Payments</h1><p class="sub">Confirm cash → assign station</p>' +
-    (col.length ? '<div class="notice orange">⚠ <b>' + col.length + '</b> playing but unpaid</div>' : "") +
-    cards + '</div></div>';
+  return '<div class="screen"><div class="wrap"><h1 style="font-size:22px">Payments</h1><p class="sub">Confirm cash → assign station</p>' + (col.length ? '<div class="notice orange">⚠ <b>' + col.length + '</b> playing but unpaid</div>' : "") + cards + '</div></div>';
 };
-
 window.collect = function(sid) {
   var s = getSess(sid);
   if (!s) return;
@@ -464,39 +330,18 @@ window.collect = function(sid) {
   });
 };
 
-/* ---- Requests ---- */
 R.requests = function() {
   if (!can("requests")) return R.denied();
   var pendingReqs = REQ.filter(function(r) { return r.status === "pending"; });
   var pendingAct = CUST.filter(function(c) { return !c.activated; });
-  var actHTML = pendingAct.length ? '<div class="sec-label" style="color:var(--pink)">⏳ Signups (' + pendingAct.length + ')</div>' +
-    pendingAct.map(function(c) {
-      return '<div class="card" style="border-left:4px solid var(--orange);padding:14px">' +
-        '<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">' +
-        (c.profilePic ? '<div class="avatar" style="background-image:url(\'' + c.profilePic + '\')"></div>' : '<div class="avatar">' + c.name.charAt(0).toUpperCase() + '</div>') +
-        '<div style="flex:1"><div style="font-weight:700">' + c.name + '</div><div style="color:var(--cyan);font-size:15px;font-weight:800;letter-spacing:2px;margin-top:2px;font-family:\'Courier New\',monospace">' + c.id + '</div></div></div>' +
-        '<div style="display:flex;gap:8px"><button class="btn green sm" style="flex:1" onclick="activateCust(\'' + c.id + '\')">✅ Activate</button>' +
-        '<button class="btn danger sm" onclick="deleteCust(\'' + c.id + '\')">🗑</button></div></div>';
-    }).join("") : "";
-  var reqHTML = pendingReqs.length ? '<div class="sec-label" style="color:var(--pink)">🔔 Requests (' + pendingReqs.length + ')</div>' +
-    pendingReqs.map(function(r) {
-      return '<div class="card" style="border-left:4px solid ' + (r.type === "snack" ? "var(--pink)" : "var(--orange)") + '">' +
-        '<div style="font-size:10px;color:' + (r.type === "snack" ? "var(--pink)" : "var(--orange)") + ';font-weight:800;letter-spacing:1.5px">' + (r.type === "snack" ? "🍟 SNACK" : "📋 REQUEST") + '</div>' +
-        '<div style="font-weight:700;font-size:15px;margin-top:6px">' + r.customerName + '</div>' +
-        '<div style="color:var(--muted);font-size:13px;margin:8px 0">' + (r.items || []).join(" · ") + '</div>' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--border)">' +
-          '<div><div style="font-size:20px;font-weight:800;color:var(--gold-bright)">₹' + r.total + '</div>' +
-          (r.pointsUsed > 0 ? '<div style="font-size:10px;color:var(--gold);margin-top:2px">OR ' + r.pointsUsed + ' pts</div>' : "") + '</div>' +
-          '<div style="display:flex;gap:6px">' +
-            '<button class="btn danger xs" onclick="rejectReq(\'' + r.id + '\')">✕</button>' +
-            '<button class="btn sm" onclick="approveReq(\'' + r.id + '\')">Approve</button></div></div></div>';
-    }).join("") : "";
-  return '<div class="screen"><div class="wrap">' +
-    '<h1 style="font-size:22px">Requests</h1><p class="sub">Waiting for you</p>' +
-    ((!pendingReqs.length && !pendingAct.length) ? '<div class="empty"><div class="big">✓</div><div class="msg">ALL CLEAR</div></div>' : "") +
-    actHTML + reqHTML + '</div></div>';
+  var actHTML = pendingAct.length ? '<div class="sec-label urgent">⏳ Signups (' + pendingAct.length + ')</div>' + pendingAct.map(function(c) {
+    return '<div class="card" style="border-left:4px solid var(--orange);padding:14px"><div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">' + (c.profilePic ? '<div class="avatar" style="background-image:url(\'' + c.profilePic + '\')"></div>' : '<div class="avatar">' + c.name.charAt(0).toUpperCase() + '</div>') + '<div style="flex:1"><div style="font-weight:700">' + c.name + '</div><div style="color:var(--cyan);font-size:15px;font-weight:800;letter-spacing:2px;margin-top:2px;font-family:\'Courier New\',monospace">' + c.id + '</div></div></div><div style="display:flex;gap:8px"><button class="btn green sm" style="flex:1" onclick="activateCust(\'' + c.id + '\')">✅ Activate</button><button class="btn danger sm" onclick="deleteCust(\'' + c.id + '\')">🗑</button></div></div>';
+  }).join("") : "";
+  var reqHTML = pendingReqs.length ? '<div class="sec-label urgent">🔔 Requests (' + pendingReqs.length + ')</div>' + pendingReqs.map(function(r) {
+    return '<div class="card" style="border-left:4px solid ' + (r.type === "snack" ? "var(--pink)" : "var(--orange)") + '"><div style="font-size:10px;color:' + (r.type === "snack" ? "var(--pink)" : "var(--orange)") + ';font-weight:800;letter-spacing:1.5px">' + (r.type === "snack" ? "🍟 SNACK" : "📋 REQUEST") + '</div><div style="font-weight:700;font-size:15px;margin-top:6px">' + r.customerName + '</div><div style="color:var(--muted);font-size:13px;margin:8px 0">' + (r.items || []).join(" · ") + '</div><div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--border)"><div><div style="font-size:20px;font-weight:800;color:var(--gold-bright)">₹' + r.total + '</div></div><div style="display:flex;gap:6px"><button class="btn danger xs" onclick="rejectReq(\'' + r.id + '\')">✕</button><button class="btn sm" onclick="approveReq(\'' + r.id + '\')">Approve</button></div></div></div>';
+  }).join("") : "";
+  return '<div class="screen"><div class="wrap"><h1 style="font-size:22px">Requests</h1><p class="sub">Waiting for you</p>' + ((!pendingReqs.length && !pendingAct.length) ? '<div class="empty"><div class="big">✓</div><div class="msg">ALL CLEAR</div></div>' : "") + actHTML + reqHTML + '</div></div>';
 };
-
 window.activateCust = function(cid) {
   loadAll().then(function() {
     var c = CUST.find(function(x) { return x.id === cid; });
@@ -512,7 +357,6 @@ window.activateCust = function(cid) {
     render("requests", {});
   });
 };
-
 window.deleteCust = function(cid) {
   if (!confirm("Delete this customer?")) return;
   loadAll().then(function() {
@@ -520,22 +364,19 @@ window.deleteCust = function(cid) {
     render("requests", {});
   });
 };
-
 window.approveReq = function(rid) {
   loadAll().then(function() {
     var r2 = REQ.find(function(x) { return x.id === rid; });
     if (!r2) return;
     var c = CUST.find(function(x) { return x.id === r2.customerId; });
-    if (r2.type === "snack") {
-      if (c) {
-        var earned = Math.floor(r2.total / RR);
-        c.points = Math.min(POINTS_MAX, (c.points || 0) + earned);
-        c.totalSpent += r2.total;
-        var arr = CUST.slice();
-        var i = arr.findIndex(function(x) { return x.id === c.id; });
-        if (i >= 0) arr[i] = c;
-        saveC(arr);
-      }
+    if (r2.type === "snack" && c) {
+      var earned = Math.floor(r2.total / RR);
+      c.points = Math.min(POINTS_MAX, (c.points || 0) + earned);
+      c.totalSpent += r2.total;
+      var arr = CUST.slice();
+      var i = arr.findIndex(function(x) { return x.id === c.id; });
+      if (i >= 0) arr[i] = c;
+      saveC(arr);
     }
     r2.status = "approved";
     r2.processedAt = Date.now();
@@ -544,7 +385,6 @@ window.approveReq = function(rid) {
     render("requests", {});
   });
 };
-
 window.rejectReq = function(rid) {
   if (!confirm("Reject?")) return;
   loadAll().then(function() {
@@ -557,42 +397,17 @@ window.rejectReq = function(rid) {
   });
 };
 
-/* ---- Customers ---- */
 R.customers = function() {
   if (!can("customers")) return R.denied();
   var cs = CUST.slice().sort(function(a, b) { return b.totalSpent - a.totalSpent; });
   var listHTML = cs.length ? cs.map(function(c) {
     var badge = !c.activated ? '<span class="badge pending">Pending</span>' : c.banned ? '<span class="badge banned">Banned</span>' : c.vip ? '<span class="badge vip">VIP</span>' : '<span class="badge open">Active</span>';
-    return '<div class="card" style="padding:14px">' +
-      '<div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">' +
-        (c.profilePic ? '<div class="avatar" style="background-image:url(\'' + c.profilePic + '\')"></div>' : '<div class="avatar">' + c.name.charAt(0).toUpperCase() + '</div>') +
-        '<div style="flex:1"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px">' +
-          '<div style="font-weight:700;font-size:15px">' + c.name + '</div>' + badge + '</div>' +
-          '<div style="color:var(--cyan);font-size:14px;font-weight:800;letter-spacing:2px;font-family:\'Courier New\',monospace;margin-top:3px">' + c.id + '</div></div></div>' +
-      '<div class="grid4" style="gap:8px;margin-bottom:10px">' +
-        '<div style="background:var(--card2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--muted);font-weight:700">POINTS</div><div style="font-weight:800;color:var(--gold-bright);margin-top:2px">' + c.points + '</div></div>' +
-        '<div style="background:var(--card2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--muted);font-weight:700">SPENT</div><div style="font-weight:800;margin-top:2px">₹' + c.totalSpent + '</div></div>' +
-        '<div style="background:var(--card2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--muted);font-weight:700">VISITS</div><div style="font-weight:800;margin-top:2px">' + c.visits + '</div></div>' +
-        '<div style="background:var(--card2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--muted);font-weight:700">HOURS</div><div style="font-weight:800;color:var(--cyan);margin-top:2px">' + (c.ps5Hours || 0) + '·' + (c.raceHours || 0) + '</div></div></div>' +
-      '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
-        (!c.activated ? '<button class="btn green xs" onclick="activateCust(\'' + c.id + '\')">✅ Activate</button>' : "") +
-        '<button class="btn dark xs" onclick="editPts(\'' + c.id + '\')">💰 Points</button>' +
-        '<button class="btn dark xs" onclick="editHrs(\'' + c.id + '\')">🎫 Hours</button>' +
-        '<button class="btn dark xs" onclick="resetPin(\'' + c.id + '\')">🔑 PIN</button>' +
-        '<button class="btn dark xs" onclick="togVIP(\'' + c.id + '\')">' + (c.vip ? "Remove VIP" : "⭐ VIP") + '</button>' +
-        '<button class="btn ' + (c.banned ? "dark" : "danger") + ' xs" onclick="togBan(\'' + c.id + '\')">' + (c.banned ? "Unban" : "🚫") + '</button>' +
-      '</div></div>';
+    return '<div class="card" style="padding:14px"><div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">' + (c.profilePic ? '<div class="avatar" style="background-image:url(\'' + c.profilePic + '\')"></div>' : '<div class="avatar">' + c.name.charAt(0).toUpperCase() + '</div>') + '<div style="flex:1"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="font-weight:700;font-size:15px">' + c.name + '</div>' + badge + '</div><div style="color:var(--cyan);font-size:14px;font-weight:800;letter-spacing:2px;font-family:\'Courier New\',monospace;margin-top:3px">' + c.id + '</div></div></div><div class="grid4" style="gap:8px;margin-bottom:10px"><div style="background:var(--card2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--muted);font-weight:700">POINTS</div><div style="font-weight:800;color:var(--gold-bright);margin-top:2px">' + c.points + '</div></div><div style="background:var(--card2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--muted);font-weight:700">SPENT</div><div style="font-weight:800;margin-top:2px">₹' + c.totalSpent + '</div></div><div style="background:var(--card2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--muted);font-weight:700">VISITS</div><div style="font-weight:800;margin-top:2px">' + c.visits + '</div></div><div style="background:var(--card2);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--muted);font-weight:700">HOURS</div><div style="font-weight:800;color:var(--cyan);margin-top:2px">' + (c.ps5Hours || 0) + '·' + (c.raceHours || 0) + '</div></div></div><div style="display:flex;gap:6px;flex-wrap:wrap">' + (!c.activated ? '<button class="btn green xs" onclick="activateCust(\'' + c.id + '\')">✅ Activate</button>' : "") + '<button class="btn dark xs" onclick="editPts(\'' + c.id + '\')">💰 Points</button><button class="btn dark xs" onclick="editHrs(\'' + c.id + '\')">🎫 Hours</button><button class="btn dark xs" onclick="resetPin(\'' + c.id + '\')">🔑 PIN</button><button class="btn dark xs" onclick="togVIP(\'' + c.id + '\')">' + (c.vip ? "Remove VIP" : "⭐ VIP") + '</button><button class="btn ' + (c.banned ? "dark" : "danger") + ' xs" onclick="togBan(\'' + c.id + '\')">' + (c.banned ? "Unban" : "🚫") + '</button></div></div>';
   }).join("") : '<div class="empty"><div class="big">👥</div><div class="msg">NO CUSTOMERS</div></div>';
-  return '<div class="screen"><div class="wrap">' +
-    '<h1 style="font-size:22px">Customers</h1><p class="sub">' + cs.length + ' total</p>' +
-    '<input placeholder="🔍 Search name or number" oninput="filtC(this.value)">' +
-    '<div id="ccl" style="color:var(--muted);font-size:12px;font-weight:700;margin-bottom:12px">' + cs.length + ' shown</div>' +
-    '<div id="cl">' + listHTML + '</div></div></div>';
+  return '<div class="screen"><div class="wrap"><h1 style="font-size:22px">Customers</h1><p class="sub">' + cs.length + ' total</p><input placeholder="🔍 Search name or number" oninput="filtC(this.value)"><div id="ccl" style="color:var(--muted);font-size:12px;font-weight:700;margin-bottom:12px">' + cs.length + ' shown</div><div id="cl">' + listHTML + '</div></div></div>';
 };
-
 window.filtC = function(q) {
-  var s = q.toLowerCase().trim();
-  var sh = 0;
+  var s = q.toLowerCase().trim(); var sh = 0;
   document.querySelectorAll("#cl .card").forEach(function(el) {
     var txt = el.textContent.toLowerCase();
     var m = !s || txt.indexOf(s) >= 0;
@@ -601,7 +416,6 @@ window.filtC = function(q) {
   });
   document.getElementById("ccl").textContent = sh + " shown";
 };
-
 window.editPts = function(cid) {
   var c = CUST.find(function(x) { return x.id === cid; });
   if (!c) return;
@@ -620,7 +434,6 @@ window.editPts = function(cid) {
     render("customers", {});
   });
 };
-
 window.editHrs = function(cid) {
   var c = CUST.find(function(x) { return x.id === cid; });
   if (!c) return;
@@ -640,7 +453,6 @@ window.editHrs = function(cid) {
     render("customers", {});
   });
 };
-
 window.resetPin = function(cid) {
   var p = String(Math.floor(1000 + Math.random() * 9000));
   loadAll().then(function() {
@@ -655,7 +467,6 @@ window.resetPin = function(cid) {
     render("customers", {});
   });
 };
-
 window.togVIP = function(cid) {
   loadAll().then(function() {
     var c = CUST.find(function(x) { return x.id === cid; });
@@ -668,7 +479,6 @@ window.togVIP = function(cid) {
     render("customers", {});
   });
 };
-
 window.togBan = function(cid) {
   if (!confirm("Toggle ban for this customer?")) return;
   loadAll().then(function() {
@@ -683,37 +493,22 @@ window.togBan = function(cid) {
   });
 };
 
-/* ---- More / Settings ---- */
 R.more = function() {
   var me = getMe();
   var cards = "";
   if (can("menu")) cards += '<div class="card click" onclick="go(\'menu\')"><div style="font-weight:700">🍟 Menu Manager</div><div class="sub" style="margin:4px 0 0;font-size:13px">' + ADD.length + ' items</div></div>';
   if (can("tournaments")) cards += '<div class="card click" onclick="go(\'tourneys\')"><div style="font-weight:700">🏆 Tournaments</div><div class="sub" style="margin:4px 0 0;font-size:13px">' + TOURN.length + ' events</div></div>';
   if (can("reports")) cards += '<div class="card click" onclick="go(\'reports\')"><div style="font-weight:700">📊 Reports</div></div>';
-  if (can("settings")) cards += '<div class="card click" onclick="go(\'settings\')"><div style="font-weight:700">⚙ Settings</div></div>';
-  return '<div class="screen"><div class="wrap">' +
-    '<h1 style="font-size:22px">More</h1><p class="sub">' + (me && me.role === "owner" ? "👑 Owner" : "Admin") + ' · ' + (me ? me.username : "") + '</p>' +
-    cards +
-    '<button class="btn dark" style="margin-top:20px" onclick="window.location.href=\'index.html\'">← Back to Customer App</button>' +
-    '<button class="btn danger" style="margin-top:8px" onclick="doLogout()">Sign Out</button>' +
-  '</div></div>';
+  return '<div class="screen"><div class="wrap"><h1 style="font-size:22px">More</h1><p class="sub">' + (me && me.role === "owner" ? "👑 Owner" : "Admin") + ' · ' + (me ? me.username : "") + '</p>' + cards + '<button class="btn dark" style="margin-top:20px" onclick="window.location.href=\'index.html\'">← Back to Customer App</button><button class="btn danger" style="margin-top:8px" onclick="doLogout()">Sign Out</button></div></div>';
 };
 
 R.menu = function() {
   if (!can("menu")) return R.denied();
   var cards = ADD.map(function(a) {
-    return '<div class="snack-row"><div class="snack-photo">🍽️</div>' +
-      '<div class="snack-info"><div class="snack-name">' + a.name + '</div><div class="snack-sub">₹' + a.price + (a.points_price ? " · " + a.points_price + " pts" : "") + '</div></div>' +
-      '<div style="display:flex;gap:6px"><button class="btn dark xs" onclick="editItem(\'' + a.id + '\')">✏</button>' +
-      '<button class="btn danger xs" onclick="delItem(\'' + a.id + '\')">✕</button></div></div>';
+    return '<div class="snack-row"><div class="snack-photo">🍽️</div><div class="snack-info"><div class="snack-name">' + a.name + '</div><div class="snack-sub">₹' + a.price + (a.points_price ? " · " + a.points_price + " pts" : "") + '</div></div><div style="display:flex;gap:6px"><button class="btn dark xs" onclick="editItem(\'' + a.id + '\')">✏</button><button class="btn danger xs" onclick="delItem(\'' + a.id + '\')">✕</button></div></div>';
   }).join("");
-  return '<div class="screen"><div class="wrap">' +
-    '<a href="javascript:go(\'more\')" style="color:var(--muted);font-size:13px">← More</a>' +
-    '<h1 style="margin-top:20px">Menu Manager</h1><p class="sub">' + ADD.length + ' items</p>' +
-    '<button class="btn" onclick="addItem()">+ Add Item</button>' +
-    '<div style="margin-top:16px">' + cards + '</div></div></div>';
+  return '<div class="screen"><div class="wrap"><a href="javascript:go(\'more\')" style="color:var(--muted);font-size:13px">← More</a><h1 style="margin-top:20px">Menu Manager</h1><p class="sub">' + ADD.length + ' items</p><button class="btn" onclick="addItem()">+ Add Item</button><div style="margin-top:16px">' + cards + '</div></div></div>';
 };
-
 window.addItem = function() {
   var n = prompt("Item name?");
   if (!n) return;
@@ -722,12 +517,12 @@ window.addItem = function() {
   loadAll().then(function() {
     var id = "i" + Date.now().toString(36);
     var arr = ADD.concat([{ id: id, name: n, price: p, points_price: p, photo: "" }]);
+    var old = ADD;
     ADD = arr;
-    syncTable("addons", arr, [], function(r) { return { id: r.id, name: r.name, price: r.price, points_price: r.points_price || 0, photo: r.photo || "" }; });
+    syncTable("addons", arr, old, function(r) { return { id: r.id, name: r.name, price: r.price, points_price: r.points_price || 0, photo: r.photo || "" }; });
     render("menu", {});
   });
 };
-
 window.editItem = function(id) {
   var a = ADD.find(function(x) { return x.id === id; });
   if (!a) return;
@@ -737,41 +532,31 @@ window.editItem = function(id) {
   if (!p) return;
   loadAll().then(function() {
     var arr = ADD.map(function(x) { return x.id === id ? Object.assign({}, x, { name: n, price: p, points_price: p }) : x; });
+    var old = ADD;
     ADD = arr;
-    syncTable("addons", arr, [], function(r) { return { id: r.id, name: r.name, price: r.price, points_price: r.points_price || 0, photo: r.photo || "" }; });
+    syncTable("addons", arr, old, function(r) { return { id: r.id, name: r.name, price: r.price, points_price: r.points_price || 0, photo: r.photo || "" }; });
     render("menu", {});
   });
 };
-
 window.delItem = function(id) {
   if (!confirm("Delete item?")) return;
   loadAll().then(function() {
     var arr = ADD.filter(function(x) { return x.id !== id; });
+    var old = ADD;
     ADD = arr;
-    saveAdmins([]);
-    syncTable("addons", arr, [], function(r) { return { id: r.id, name: r.name, price: r.price, points_price: r.points_price || 0, photo: r.photo || "" }; });
+    syncTable("addons", arr, old, function(r) { return { id: r.id, name: r.name, price: r.price, points_price: r.points_price || 0, photo: r.photo || "" }; });
     render("menu", {});
   });
 };
 
-/* ---- Tournaments (simple) ---- */
 R.tourneys = function() {
   if (!can("tournaments")) return R.denied();
   var cards = TOURN.length ? TOURN.map(function(t) {
     var players = t.players || [];
-    return '<div class="card click" onclick="go(\'tdetail\',{id:\'' + t.id + '\'})">' +
-      '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><div style="font-weight:800">' + (t.banner || "🏆") + ' ' + t.name + '</div>' +
-      '<span class="badge ' + t.status + '">' + t.status.toUpperCase() + '</span></div>' +
-      '<div style="color:var(--muted);font-size:12px">' + t.game + ' · ' + (t.date || "") + ' ' + fmtTime(t.time) + '</div>' +
-      '<div style="color:var(--cyan);font-size:12px;margin-top:4px">👥 ' + players.length + '/' + (t.maxPlayers || 16) + '</div></div>';
+    return '<div class="card click" onclick="go(\'tdetail\',{id:\'' + t.id + '\'})"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><div style="font-weight:800">' + (t.banner || "🏆") + ' ' + t.name + '</div><span class="badge ' + t.status + '">' + t.status.toUpperCase() + '</span></div><div style="color:var(--muted);font-size:12px">' + t.game + ' · ' + (t.date || "") + ' ' + fmtTime(t.time) + '</div><div style="color:var(--cyan);font-size:12px;margin-top:4px">👥 ' + players.length + '/' + (t.maxPlayers || 16) + '</div></div>';
   }).join("") : '<div class="empty"><div class="big">🏆</div><div class="msg">NONE</div></div>';
-  return '<div class="screen"><div class="wrap">' +
-    '<a href="javascript:go(\'more\')" style="color:var(--muted);font-size:13px">← More</a>' +
-    '<h1 style="margin-top:20px">Tournaments</h1>' +
-    '<button class="btn" onclick="createTourney()">+ New</button>' +
-    '<div style="margin-top:16px">' + cards + '</div></div></div>';
+  return '<div class="screen"><div class="wrap"><a href="javascript:go(\'more\')" style="color:var(--muted);font-size:13px">← More</a><h1 style="margin-top:20px">Tournaments</h1><button class="btn" onclick="createTourney()">+ New</button><div style="margin-top:16px">' + cards + '</div></div></div>';
 };
-
 window.createTourney = function() {
   var n = prompt("Tournament name?");
   if (!n) return;
@@ -783,35 +568,23 @@ window.createTourney = function() {
   if (!tm) return;
   var fee = parseInt(prompt("Entry fee ₹?", "500")) || 0;
   loadAll().then(function() {
-    var t = {
-      id: newTID(), name: n, game: g, date: d, time: tm,
-      entryFee: fee, maxPlayers: 16, winnersCount: 3, banner: "🏆", bannerPic: "",
-      description: "", prize1: "", prize2: "", prize3: "", prize4: "", rules: "",
-      status: "open", players: [], bracket: [], winners: [], winner: null, createdAt: Date.now()
-    };
+    var t = { id: newTID(), name: n, game: g, date: d, time: tm, entryFee: fee, maxPlayers: 16, winnersCount: 3, banner: "🏆", bannerPic: "", description: "", prize1: "", prize2: "", prize3: "", prize4: "", rules: "", status: "open", players: [], bracket: [], winners: [], winner: null, createdAt: Date.now() };
     var arr = [t].concat(TOURN);
+    var old = TOURN;
     TOURN = arr;
-    syncTable("tournaments", arr, [], denormT);
+    syncTable("tournaments", arr, old, denormT);
     render("tourneys", {});
   });
 };
-
 R.tdetail = function(p) {
   var t = getTid(p.id);
   if (!t) return '<div class="screen"><div class="wrap"><h2>Not found</h2></div></div>';
   var players = t.players || [];
   var playerHTML = players.length ? players.map(function(pl) {
-    return '<div class="row"><div class="row-info"><div class="row-title">#' + pl.id + ' ' + pl.name + '</div></div>' +
-      (pl.paid ? '<span class="badge open">Paid</span>' : '<button class="btn xs" onclick="markPaidT(\'' + t.id + '\',\'' + pl.id + '\')">Collect</button>') + '</div>';
+    return '<div class="row"><div class="row-info"><div class="row-title">#' + pl.id + ' ' + pl.name + '</div></div>' + (pl.paid ? '<span class="badge open">Paid</span>' : '<button class="btn xs" onclick="markPaidT(\'' + t.id + '\',\'' + pl.id + '\')">Collect</button>') + '</div>';
   }).join("") : '<div class="notice">No players</div>';
-  return '<div class="screen"><div class="wrap">' +
-    '<a href="javascript:go(\'tourneys\')" style="color:var(--muted);font-size:13px">← Tournaments</a>' +
-    '<h1 style="margin-top:20px">' + t.name + '</h1><p class="sub">' + t.game + '</p>' +
-    '<div class="sec-label">Players (' + players.length + ')</div>' + playerHTML +
-    '<div class="sec-label">Actions</div>' +
-    '<button class="btn danger" onclick="delTourney(\'' + t.id + '\')">Delete Tournament</button></div></div>';
+  return '<div class="screen"><div class="wrap"><a href="javascript:go(\'tourneys\')" style="color:var(--muted);font-size:13px">← Tournaments</a><h1 style="margin-top:20px">' + t.name + '</h1><p class="sub">' + t.game + '</p><div class="sec-label">Players (' + players.length + ')</div>' + playerHTML + '<div class="sec-label">Actions</div><button class="btn danger" onclick="delTourney(\'' + t.id + '\')">Delete Tournament</button></div></div>';
 };
-
 window.markPaidT = function(tid, pid) {
   loadAll().then(function() {
     var t = getTid(tid);
@@ -823,7 +596,6 @@ window.markPaidT = function(tid, pid) {
     render("tdetail", { id: tid });
   });
 };
-
 window.delTourney = function(tid) {
   if (!confirm("Delete tournament?")) return;
   loadAll().then(function() {
@@ -832,7 +604,6 @@ window.delTourney = function(tid) {
   });
 };
 
-/* ---- Reports ---- */
 R.reports = function() {
   if (!can("reports")) return R.denied();
   var all = SESS;
@@ -840,56 +611,20 @@ R.reports = function() {
   var cash = all.filter(function(s) { return s.paid && s.method === "cash"; }).reduce(function(t, s) { return t + s.total; }, 0);
   var upi = all.filter(function(s) { return s.paid && s.method === "upi"; }).reduce(function(t, s) { return t + s.total; }, 0);
   var pts = all.filter(function(s) { return s.paid && s.method === "points"; }).reduce(function(t, s) { return t + s.total; }, 0);
-  return '<div class="screen"><div class="wrap">' +
-    '<a href="javascript:go(\'more\')" style="color:var(--muted);font-size:13px">← More</a>' +
-    '<h1 style="margin-top:20px">Reports</h1>' +
-    '<div class="grid4">' +
-      '<div class="stat"><div class="v">₹' + tr + '</div><div class="l">Revenue</div></div>' +
-      '<div class="stat"><div class="v" style="color:var(--green)">₹' + cash + '</div><div class="l">Cash</div></div>' +
-      '<div class="stat"><div class="v" style="color:var(--cyan)">₹' + upi + '</div><div class="l">UPI</div></div>' +
-      '<div class="stat"><div class="v" style="color:var(--gold-bright)">₹' + pts + '</div><div class="l">Points</div></div>' +
-    '</div>' +
-    '<div class="sec-label">Totals</div>' +
-    '<div class="card"><div class="row"><div class="row-info"><div class="row-title">Customers</div></div><div>' + CUST.length + '</div></div>' +
-    '<div class="row"><div class="row-info"><div class="row-title">Sessions</div></div><div>' + SESS.length + '</div></div>' +
-    '<div class="row"><div class="row-info"><div class="row-title">Tournaments</div></div><div>' + TOURN.length + '</div></div></div>' +
-  '</div></div>';
+  return '<div class="screen"><div class="wrap"><a href="javascript:go(\'more\')" style="color:var(--muted);font-size:13px">← More</a><h1 style="margin-top:20px">Reports</h1><div class="grid4"><div class="stat"><div class="v">₹' + tr + '</div><div class="l">Revenue</div></div><div class="stat"><div class="v" style="color:var(--green)">₹' + cash + '</div><div class="l">Cash</div></div><div class="stat"><div class="v" style="color:var(--cyan)">₹' + upi + '</div><div class="l">UPI</div></div><div class="stat"><div class="v" style="color:var(--gold-bright)">₹' + pts + '</div><div class="l">Points</div></div></div></div></div>';
 };
 
-R.settings = function() {
-  if (!can("settings")) return R.denied();
-  return '<div class="screen"><div class="wrap" style="max-width:500px">' +
-    '<a href="javascript:go(\'more\')" style="color:var(--muted);font-size:13px">← More</a>' +
-    '<h1 style="margin-top:20px">Settings</h1>' +
-    '<div class="notice green">☁ Supabase: <b>Connected</b><br>👤 <b>' + (getMe() ? getMe().username : "") + '</b>' + (isOwner() ? " 👑" : "") + '</div>' +
-  '</div></div>';
-};
-
-/* ---- New sale ---- */
 R.newsale = function() {
   if (!bk) bk = { exp: null, time: null, players: 1 };
   var e = EXP.find(function(x) { return x.id === bk.exp; });
   var expCards = EXP.map(function(x) {
-    return '<div class="card click ' + (bk.exp === x.id ? "selected" : "") + '" onclick="pickE(\'' + x.id + '\')" style="padding:14px">' +
-      '<div style="font-weight:700">' + x.name + '</div>' +
-      '<div style="color:var(--muted);font-size:12px;margin-top:4px">' + (x.fixed ? "₹" + x.fixed : "From ₹" + x.from) + '</div></div>';
+    return '<div class="card click ' + (bk.exp === x.id ? "selected" : "") + '" onclick="pickE(\'' + x.id + '\')" style="padding:14px"><div style="font-weight:700">' + x.name + '</div><div style="color:var(--muted);font-size:12px;margin-top:4px">' + (x.fixed ? "₹" + x.fixed : "From ₹" + x.from) + '</div></div>';
   }).join("");
-  var timeHTML = (e && !e.fixed) ? '<div class="sec-label">02 · Time</div><div class="grid2">' +
-    dursOf(bk.exp).map(function(m) {
-      return '<div class="tile ' + (bk.time === m ? "on" : "") + '" onclick="pickT(' + m + ')"><div class="t">' + (m < 60 ? m + "min" : m / 60 + "h") + '</div><div class="s">₹' + (e.prices[m] || 0) + '</div></div>';
-    }).join("") + '</div>' +
-    '<div class="sec-label">03 · Players</div><div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:14px">' +
-    '<button class="qty-btn" style="width:48px;height:48px" onclick="chP(-1)">−</button>' +
-    '<div style="font-size:32px;font-weight:800">' + bk.players + '</div>' +
-    '<button class="qty-btn plus" style="width:48px;height:48px" onclick="chP(1)">+</button></div>' : "";
-  return '<div class="screen"><div class="wrap">' +
-    '<a href="javascript:go(\'floor\')" style="color:var(--muted);font-size:13px">← Floor</a>' +
-    '<h1 style="margin-top:20px">New Sale</h1>' +
-    '<div class="sec-label">01 · Experience</div>' + expCards + timeHTML +
-    (e ? '<button class="btn" style="margin-top:20px" onclick="saveSale()">Save & Continue</button>' : "") +
-  '</div></div>';
+  var timeHTML = (e && !e.fixed) ? '<div class="sec-label">02 · Time</div><div class="grid2">' + dursOf(bk.exp).map(function(m) {
+    return '<div class="card click ' + (bk.time === m ? "selected" : "") + '" onclick="pickT(' + m + ')" style="padding:12px;text-align:center"><div style="font-weight:700">' + (m < 60 ? m + "min" : m / 60 + "h") + '</div><div style="color:var(--muted);font-size:12px;margin-top:4px">₹' + (e.prices[m] || 0) + '</div></div>';
+  }).join("") + '</div>' : '<div class="sec-label">03 · Players</div><div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:14px"><button class="btn dark sm" style="width:50px;height:50px;border-radius:50%;font-size:24px;padding:0" onclick="chP(-1)">−</button><div style="font-size:32px;font-weight:800">' + bk.players + '</div><button class="btn sm" style="width:50px;height:50px;border-radius:50%;font-size:24px;padding:0" onclick="chP(1)">+</button></div>';
+  return '<div class="screen"><div class="wrap"><a href="javascript:go(\'floor\')" style="color:var(--muted);font-size:13px">← Floor</a><h1 style="margin-top:20px">New Sale</h1><div class="sec-label">01 · Experience</div>' + expCards + (e ? timeHTML : "") + (e ? '<button class="btn" style="margin-top:20px" onclick="saveSale()">Save & Continue</button>' : "") + '</div></div>';
 };
-
 window.pickE = function(id) {
   bk.exp = id;
   var e = EXP.find(function(x) { return x.id === id; });
@@ -899,7 +634,6 @@ window.pickE = function(id) {
 };
 window.pickT = function(m) { bk.time = m; render("newsale", {}); };
 window.chP = function(d) { var n = bk.players + d; if (n < 1 || n > 8) return; bk.players = n; render("newsale", {}); };
-
 window.saveSale = function() {
   var e = EXP.find(function(x) { return x.id === bk.exp; });
   if (!e) return;
@@ -910,56 +644,44 @@ window.saveSale = function() {
   if (bk.time && !e.fixed && !isMem) items.push(bk.time + "min × " + bk.players + "p");
   var total = e.fixed || 0;
   if (!e.fixed && bk.time) total = (e.prices[bk.time] || 0) * bk.players;
-  var s = {
-    id: newBID(), name: n, phone: "", expId: e.id, expName: e.name, items: items,
-    total: total, minutes: isMem ? 1800 : (bk.time || 60), players: bk.players,
-    method: "cash", paid: false, status: "pending", createdAt: Date.now(),
-    customerId: null, isMembership: isMem
-  };
+  var s = { id: newBID(), name: n, phone: "", expId: e.id, expName: e.name, items: items, total: total, minutes: isMem ? 1800 : (bk.time || 60), players: bk.players, method: "cash", paid: false, status: "pending", createdAt: Date.now(), customerId: null, isMembership: isMem };
   loadAll().then(function() {
     var arr = [s].concat(SESS);
+    var old = SESS;
     SESS = arr;
-    syncTable("sessions", arr, [], denormS);
+    syncTable("sessions", arr, old, denormS);
     bk = null;
     alert("✅ Saved ₹" + total);
     go("payments");
   });
 };
 
-/* ============================================================
-   REALTIME SYNC (from customers)
-   ============================================================ */
 function setupAdminRealtime() {
   if (!sb) return;
   try { sb.removeAllChannels(); } catch(e) {}
   ["customers", "sessions", "requests", "tournaments", "addons"].forEach(function(t) {
     try {
-      sb.channel("admin-" + t)
-        .on("postgres_changes", { event: "*", schema: "public", table: t }, function(payload) {
-          loadAll().then(function() { if (curR) render(curR, {}); });
-          if (payload.eventType === "INSERT" && payload.new) {
-            var row = payload.new;
-            if (t === "customers" && row.activated === false) notifyAdmin("🎉 New signup: " + (row.name || "?"));
-            else if (t === "requests" && row.status === "pending") notifyAdmin("🍟 New order from " + (row.customer_name || "?"));
-            else if (t === "sessions" && row.status === "pending") notifyAdmin("🎮 New booking: " + (row.name || "?"));
-          }
-        })
-        .subscribe();
+      sb.channel("admin-" + t).on("postgres_changes", { event: "*", schema: "public", table: t }, function(payload) {
+        loadAll().then(function() { if (curR) render(curR, {}); });
+        if (payload.eventType === "INSERT" && payload.new) {
+          var row = payload.new;
+          if (t === "customers" && row.activated === false) notifyAdmin("🎉 New signup: " + (row.name || "?"));
+          else if (t === "requests" && row.status === "pending") notifyAdmin("🍟 New order from " + (row.customer_name || "?"));
+          else if (t === "sessions" && row.status === "pending") notifyAdmin("🎮 New booking: " + (row.name || "?"));
+        }
+      }).subscribe();
     } catch(e) { console.error(e); }
   });
 }
-
 if ("Notification" in window && Notification.permission === "default") {
   setTimeout(function() { Notification.requestPermission(); }, 3000);
 }
 
-/* ---- Start ---- */
 (function() {
   if (!ADMINS.length) go("claim_owner");
   else if (isAdmin()) go("floor");
   else go("login");
 })();
-
 loadAll().then(function() {
   if (curR) render(curR, {});
   setupAdminRealtime();
