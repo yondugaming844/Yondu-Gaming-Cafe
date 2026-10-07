@@ -375,21 +375,37 @@ R.requests = function() {
 };
 window.activateCust = function(cid) {
   var c = CUST.find(function(x) { return x.id === cid; });
-  if (!c) return;
+  if (!c) { console.log("❌ Customer not found:", cid); return; }
+  console.log("🔵 Activating:", cid, "current data:", c);
   var newPoints = (c.points || 0) + 50;
   var newCredit = (c.credit || 0) + 30;
   sb.from("customers").update({
     activated: true,
     points: newPoints,
     credit: newCredit
-  }).eq("id", cid).then(function(res) {
-    if (res.error) { toast("❌ " + res.error.message, "error"); console.error(res.error); return; }
+  }).eq("id", cid).select().then(function(res) {
+    console.log("🟢 Supabase response:", res);
+    if (res.error) {
+      console.error("❌ Error:", res.error);
+      toast("❌ " + res.error.message, "error");
+      return;
+    }
+    if (!res.data || res.data.length === 0) {
+      console.error("⚠️ 0 rows updated! Customer ID probably doesn't match.");
+      toast("⚠️ 0 rows updated — ID mismatch", "error");
+      return;
+    }
+    console.log("✅ Updated row:", res.data[0]);
     c.activated = true;
     c.points = newPoints;
     c.credit = newCredit;
     toast("✅ " + c.name + " activated", "success");
     render(curR, {});
-  }).catch(function(e) { toast("❌ " + e.message, "error"); console.error(e); });
+  }).catch(function(e) {
+    console.error("🔥 Exception:", e);
+    toast("❌ " + e.message, "error");
+  });
+};
 
 };
 window.deleteCust = function(cid) {
