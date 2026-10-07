@@ -373,41 +373,21 @@ R.requests = function() {
   }).join("") : "";
   return '<div class="screen"><div class="wrap"><h1 style="font-size:22px">Requests</h1><p class="sub">Waiting for you</p>' + ((!pendingReqs.length && !pendingAct.length) ? '<div class="empty"><div class="big">✓</div><div class="msg">ALL CLEAR</div></div>' : "") + actHTML + reqHTML + '</div></div>';
 };
+
 window.activateCust = function(cid) {
   var c = CUST.find(function(x) { return x.id === cid; });
-  if (!c) { console.log("❌ Customer not found:", cid); return; }
-  console.log("🔵 Activating:", cid, "current data:", c);
+  if (!c) { toast("❌ Customer not found", "error"); return; }
   var newPoints = (c.points || 0) + 50;
   var newCredit = (c.credit || 0) + 30;
-  sb.from("customers").update({
-    activated: true,
-    points: newPoints,
-    credit: newCredit
-  }).eq("id", cid).select().then(function(res) {
-    console.log("🟢 Supabase response:", res);
-    if (res.error) {
-      console.error("❌ Error:", res.error);
-      toast("❌ " + res.error.message, "error");
-      return;
-    }
-    if (!res.data || res.data.length === 0) {
-      console.error("⚠️ 0 rows updated! Customer ID probably doesn't match.");
-      toast("⚠️ 0 rows updated — ID mismatch", "error");
-      return;
-    }
-    console.log("✅ Updated row:", res.data[0]);
-    c.activated = true;
-    c.points = newPoints;
-    c.credit = newCredit;
-    toast("✅ " + c.name + " activated", "success");
+  sb.from("customers").update({ activated: true, points: newPoints, credit: newCredit }).eq("id", cid).select().then(function(res) {
+    if (res.error) { toast("❌ " + res.error.message, "error"); console.error(res.error); return; }
+    if (!res.data || res.data.length === 0) { toast("⚠️ Could not update", "error"); return; }
+    c.activated = true; c.points = newPoints; c.credit = newCredit;
+    toast("✅ " + c.name + " activated!", "success");
     render(curR, {});
-  }).catch(function(e) {
-    console.error("🔥 Exception:", e);
-    toast("❌ " + e.message, "error");
-  });
+  }).catch(function(e) { toast("❌ " + e.message, "error"); console.error(e); });
 };
 
-};
 window.deleteCust = function(cid) {
   var c = CUST.find(function(x) { return x.id === cid; });
   confirmSheet({ title: "Delete Customer?", message: "Delete " + (c ? c.name : "this customer") + "?\nThis cannot be undone.", yesText: "Delete", danger: true,
@@ -428,8 +408,7 @@ window.approveReq = function(rid) {
   Promise.all([reqUpdate, custUpdate]).then(function(results) {
     var err = results.find(function(r) { return r && r.error; });
     if (err) { toast("❌ " + err.error.message, "error"); return; }
-    r2.status = "approved";
-    r2.processedAt = Date.now();
+    r2.status = "approved"; r2.processedAt = Date.now();
     toast("✅ Approved", "success");
     render("requests", {});
   }).catch(function(e) { toast("❌ " + e.message, "error"); });
@@ -466,7 +445,12 @@ window.editPts = function(cid) {
     confirmText: "Save Points",
     onConfirm: function(v) {
       var n = parseInt(v.pts); if (isNaN(n)) return toast("Enter a number", "error");
-      loadAll().then(function() { var c2 = CUST.find(function(x) { return x.id === cid; }); if (!c2) return; c2.points = n; var arr = CUST.slice(); var i = arr.findIndex(function(x) { return x.id === cid; }); if (i >= 0) arr[i] = c2; saveC(arr); toast("✅ Points updated", "success"); render("customers", {}); });
+      sb.from("customers").update({ points: n }).eq("id", cid).then(function(res) {
+        if (res.error) { toast("❌ " + res.error.message, "error"); return; }
+        c.points = n;
+        toast("✅ Points updated", "success");
+        render("customers", {});
+      });
     }
   });
 };
@@ -477,7 +461,12 @@ window.editHrs = function(cid) {
     confirmText: "Save Hours",
     onConfirm: function(v) {
       var p = parseFloat(v.ps5) || 0; var r = parseFloat(v.race) || 0;
-      loadAll().then(function() { var c2 = CUST.find(function(x) { return x.id === cid; }); if (!c2) return; c2.ps5Hours = Math.max(0, p); c2.raceHours = Math.max(0, r); var arr = CUST.slice(); var i = arr.findIndex(function(x) { return x.id === cid; }); if (i >= 0) arr[i] = c2; saveC(arr); toast("✅ Hours updated", "success"); render("customers", {}); });
+      sb.from("customers").update({ ps5_hours: Math.max(0, p), race_hours: Math.max(0, r) }).eq("id", cid).then(function(res) {
+        if (res.error) { toast("❌ " + res.error.message, "error"); return; }
+        c.ps5Hours = Math.max(0, p); c.raceHours = Math.max(0, r);
+        toast("✅ Hours updated", "success");
+        render("customers", {});
+      });
     }
   });
 };
@@ -488,15 +477,37 @@ window.resetPin = function(cid) {
     fields: [{ type: "info", value: "New PIN: <b style='font-size:22px;color:var(--gold-bright);letter-spacing:4px'>" + p + "</b><br><small>Write this down and give to customer</small>" }],
     confirmText: "✅ Confirm Reset",
     onConfirm: function() {
-      loadAll().then(function() { var c2 = CUST.find(function(x) { return x.id === cid; }); if (!c2) return; c2.pinHash = hashPin(p); var arr = CUST.slice(); var i = arr.findIndex(function(x) { return x.id === cid; }); if (i >= 0) arr[i] = c2; saveC(arr); toast("✅ New PIN: " + p, "success"); render("customers", {}); });
+      sb.from("customers").update({ pin_hash: hashPin(p) }).eq("id", cid).then(function(res) {
+        if (res.error) { toast("❌ " + res.error.message, "error"); return; }
+        c.pinHash = hashPin(p);
+        toast("✅ New PIN: " + p, "success");
+        render("customers", {});
+      });
     }
   });
 };
-window.togVIP = function(cid) { loadAll().then(function() { var c = CUST.find(function(x) { return x.id === cid; }); if (!c) return; c.vip = !c.vip; var arr = CUST.slice(); var i = arr.findIndex(function(x) { return x.id === cid; }); if (i >= 0) arr[i] = c; saveC(arr); toast(c.vip ? "⭐ VIP added" : "VIP removed", "success"); render("customers", {}); }); };
+window.togVIP = function(cid) {
+  var c = CUST.find(function(x) { return x.id === cid; }); if (!c) return;
+  var nv = !c.vip;
+  sb.from("customers").update({ vip: nv }).eq("id", cid).then(function(res) {
+    if (res.error) { toast("❌ " + res.error.message, "error"); return; }
+    c.vip = nv;
+    toast(nv ? "⭐ VIP added" : "VIP removed", "success");
+    render("customers", {});
+  });
+};
 window.togBan = function(cid) {
   var c = CUST.find(function(x) { return x.id === cid; }); if (!c) return;
   confirmSheet({ title: (c.banned ? "Unban " : "Ban ") + c.name + "?", yesText: c.banned ? "Unban" : "Ban", danger: !c.banned,
-    onYes: function() { loadAll().then(function() { var c2 = CUST.find(function(x) { return x.id === cid; }); if (!c2) return; c2.banned = !c2.banned; var arr = CUST.slice(); var i = arr.findIndex(function(x) { return x.id === cid; }); if (i >= 0) arr[i] = c2; saveC(arr); toast(c2.banned ? "🚫 Banned" : "✅ Unbanned", "success"); render("customers", {}); }); } });
+    onYes: function() {
+      var nb = !c.banned;
+      sb.from("customers").update({ banned: nb }).eq("id", cid).then(function(res) {
+        if (res.error) { toast("❌ " + res.error.message, "error"); return; }
+        c.banned = nb;
+        toast(nb ? "🚫 Banned" : "✅ Unbanned", "success");
+        render("customers", {});
+      });
+    } });
 };
 
 R.more = function() {
@@ -526,7 +537,14 @@ window.addItem = function() {
       var n = (v.name || "").trim(); if (!n) return toast("Enter a name", "error");
       var p = parseInt(v.price) || 0; if (!p) return toast("Enter a price", "error");
       var pp = parseInt(v.pts) || p;
-      loadAll().then(function() { var id = "i" + Date.now().toString(36); var arr = ADD.concat([{ id: id, name: n, price: p, points_price: pp, photo: "" }]); var old = ADD; ADD = arr; syncTable("addons", arr, old, function(r) { return { id: r.id, name: r.name, price: r.price, points_price: r.points_price || 0, photo: r.photo || "" }; }); toast("✅ Added " + n, "success"); render("menu", {}); });
+      var id = "i" + Date.now().toString(36);
+      var newItem = { id: id, name: n, price: p, points_price: pp, photo: "" };
+      sb.from("addons").insert(newItem).then(function(res) {
+        if (res.error) { toast("❌ " + res.error.message, "error"); return; }
+        ADD = ADD.concat([newItem]);
+        toast("✅ Added " + n, "success");
+        render("menu", {});
+      });
     }
   });
 };
@@ -539,14 +557,26 @@ window.editItem = function(id) {
       var n = (v.name || "").trim(); if (!n) return toast("Enter a name", "error");
       var p = parseInt(v.price) || 0; if (!p) return toast("Enter a price", "error");
       var pp = parseInt(v.pts) || p;
-      loadAll().then(function() { var arr = ADD.map(function(x) { return x.id === id ? Object.assign({}, x, { name: n, price: p, points_price: pp }) : x; }); var old = ADD; ADD = arr; syncTable("addons", arr, old, function(r) { return { id: r.id, name: r.name, price: r.price, points_price: r.points_price || 0, photo: r.photo || "" }; }); toast("✅ Saved", "success"); render("menu", {}); });
+      sb.from("addons").update({ name: n, price: p, points_price: pp }).eq("id", id).then(function(res) {
+        if (res.error) { toast("❌ " + res.error.message, "error"); return; }
+        a.name = n; a.price = p; a.points_price = pp;
+        toast("✅ Saved", "success");
+        render("menu", {});
+      });
     }
   });
 };
 window.delItem = function(id) {
   var a = ADD.find(function(x) { return x.id === id; }); if (!a) return;
   confirmSheet({ title: "Delete " + a.name + "?", yesText: "Delete", danger: true,
-    onYes: function() { loadAll().then(function() { var arr = ADD.filter(function(x) { return x.id !== id; }); var old = ADD; ADD = arr; syncTable("addons", arr, old, function(r) { return { id: r.id, name: r.name, price: r.price, points_price: r.points_price || 0, photo: r.photo || "" }; }); toast("🗑 Deleted", "success"); render("menu", {}); }); } });
+    onYes: function() {
+      sb.from("addons").delete().eq("id", id).then(function(res) {
+        if (res.error) { toast("❌ " + res.error.message, "error"); return; }
+        ADD = ADD.filter(function(x) { return x.id !== id; });
+        toast("🗑 Deleted", "success");
+        render("menu", {});
+      });
+    } });
 };
 
 R.tourneys = function() {
@@ -573,10 +603,10 @@ window.createTourney = function() {
     onConfirm: function(v) {
       var n = (v.name || "").trim(); if (!n) return toast("Enter tournament name", "error");
       var g = (v.game || "").trim(); if (!g) return toast("Enter game", "error");
-      loadAll().then(function() {
-        var t = { id: newTID(), name: n, game: g, date: v.date || today, time: v.time || "18:00", entryFee: parseInt(v.fee) || 0, maxPlayers: parseInt(v.maxp) || 16, winnersCount: 3, banner: "🏆", bannerPic: "", description: "", prize1: "", prize2: "", prize3: "", prize4: "", rules: "", status: "open", players: [], bracket: [], winners: [], winner: null, createdAt: Date.now() };
-        var arr = [t].concat(TOURN); var old = TOURN; TOURN = arr;
-        syncTable("tournaments", arr, old, denormT);
+      var t = { id: newTID(), name: n, game: g, date: v.date || today, time: v.time || "18:00", entryFee: parseInt(v.fee) || 0, maxPlayers: parseInt(v.maxp) || 16, winnersCount: 3, banner: "🏆", bannerPic: "", description: "", prize1: "", prize2: "", prize3: "", prize4: "", rules: "", status: "open", players: [], bracket: [], winners: [], winner: null, createdAt: Date.now() };
+      sb.from("tournaments").insert(denormT(t)).then(function(res) {
+        if (res.error) { toast("❌ " + res.error.message, "error"); return; }
+        TOURN = [t].concat(TOURN);
         toast("✅ Tournament created", "success");
         render("tourneys", {});
       });
@@ -701,17 +731,13 @@ function forcePasswordReset(admin, isExpired) {
     if (newHash === admin.passHash) return toast("Cannot reuse current password", "error");
     if (checkPasswordHistory(newHash, admin.password_history)) return toast("Recently used password — pick a new one", "error");
     var oldHistory = pushPasswordHistory(admin.passHash, admin.password_history);
-    loadAll().then(function() {
-      var arr = ADMINS.map(function(x) {
-        return x.username === admin.username ?
-          Object.assign({}, x, { passHash: newHash, password_history: oldHistory, password_changed_at: Date.now() }) : x;
-      });
-      ADMINS = arr;
-      saveAdmins(arr).then(function() {
-        m.remove();
-        toast("✅ Password updated!", "success");
-        if (isExpired) { go("floor"); } else { render(curR, {}); }
-      });
+    var updatedA = Object.assign({}, admin, { passHash: newHash, password_history: oldHistory, password_changed_at: Date.now() });
+    sb.from("admins").upsert(denormA(updatedA)).then(function(res) {
+      if (res.error) { toast("❌ " + res.error.message, "error"); return; }
+      ADMINS = ADMINS.map(function(x) { return x.username === admin.username ? updatedA : x; });
+      m.remove();
+      toast("✅ Password updated!", "success");
+      if (isExpired) { go("floor"); } else { render(curR, {}); }
     });
   };
   var cancel = m.querySelector("#fp_cancel");
@@ -792,38 +818,34 @@ window.addAdmin = function() {
       if (!u || u.length < 3) return toast("Username must be 3+ characters", "error");
       if (!/^[a-z0-9_]+$/.test(u)) return toast("Only letters, numbers, underscore", "error");
       if (!p || p.length < 6) return toast("Password must be 6+ characters", "error");
-      loadAll().then(function() {
-        if (ADMINS.find(function(x) { return x.username.toLowerCase() === u; })) return toast("Username already taken", "error");
-        var newA = { username: u, passHash: hashPin(p), role: "admin", perms: ALL_PERMS.slice(), createdAt: Date.now(), password_changed_at: Date.now(), password_history: "[]" };
-        var arr = ADMINS.concat([newA]);
-        ADMINS = arr;
-        saveAdmins(arr).then(function() {
-          toast("✅ Staff \"" + u + "\" created", "success");
-          render("admin_users", {});
-        });
+      if (ADMINS.find(function(x) { return x.username.toLowerCase() === u; })) return toast("Username already taken", "error");
+      var newA = { username: u, passHash: hashPin(p), role: "admin", perms: ALL_PERMS.slice(), createdAt: Date.now(), password_changed_at: Date.now(), password_history: "[]" };
+      sb.from("admins").insert(denormA(newA)).then(function(res) {
+        if (res.error) { toast("❌ " + res.error.message, "error"); return; }
+        ADMINS = ADMINS.concat([newA]);
+        toast("✅ Staff \"" + u + "\" created", "success");
+        render("admin_users", {});
       });
     }
   });
 };
 window.editPerms = function(uname) {
-  loadAll().then(function() {
-    var a = ADMINS.find(function(x) { return x.username === uname; });
-    if (!a) return;
-    if (a.role === "owner") return toast("Owner has all permissions", "warn");
-    var m = document.createElement("div");
-    m.id = "permModal"; m.className = "modal";
-    m.innerHTML = '<div class="sheet"><h2>🛡 Permissions</h2><div class="s">' + esc(uname) + '</div>' +
-      '<div class="perm-grid">' + ALL_PERMS.map(function(p) {
-        return '<label class="perm-item"><input type="checkbox" id="perm_' + p + '"' + ((a.perms || []).indexOf(p) >= 0 ? " checked" : "") + '><span>' + PERM_LABELS[p] + '</span></label>';
-      }).join("") + '</div>' +
-      '<div style="display:flex;gap:6px;margin-bottom:14px">' +
-        '<button class="btn dark sm" style="flex:1;font-size:12px" onclick="toggleAllPerms(true)">Select All</button>' +
-        '<button class="btn dark sm" style="flex:1;font-size:12px" onclick="toggleAllPerms(false)">Clear All</button>' +
-      '</div>' +
-      '<button class="btn" onclick="savePerms(\'' + uname + '\')">Save Permissions</button>' +
-      '<button class="btn dark" style="margin-top:8px" onclick="document.getElementById(\'permModal\').remove()">Cancel</button></div>';
-    document.body.appendChild(m);
-  });
+  var a = ADMINS.find(function(x) { return x.username === uname; });
+  if (!a) return;
+  if (a.role === "owner") return toast("Owner has all permissions", "warn");
+  var m = document.createElement("div");
+  m.id = "permModal"; m.className = "modal";
+  m.innerHTML = '<div class="sheet"><h2>🛡 Permissions</h2><div class="s">' + esc(uname) + '</div>' +
+    '<div class="perm-grid">' + ALL_PERMS.map(function(p) {
+      return '<label class="perm-item"><input type="checkbox" id="perm_' + p + '"' + ((a.perms || []).indexOf(p) >= 0 ? " checked" : "") + '><span>' + PERM_LABELS[p] + '</span></label>';
+    }).join("") + '</div>' +
+    '<div style="display:flex;gap:6px;margin-bottom:14px">' +
+      '<button class="btn dark sm" style="flex:1;font-size:12px" onclick="toggleAllPerms(true)">Select All</button>' +
+      '<button class="btn dark sm" style="flex:1;font-size:12px" onclick="toggleAllPerms(false)">Clear All</button>' +
+    '</div>' +
+    '<button class="btn" onclick="savePerms(\'' + uname + '\')">Save Permissions</button>' +
+    '<button class="btn dark" style="margin-top:8px" onclick="document.getElementById(\'permModal\').remove()">Cancel</button></div>';
+  document.body.appendChild(m);
 };
 window.toggleAllPerms = function(v) {
   ALL_PERMS.forEach(function(p) { var el = document.getElementById("perm_" + p); if (el) el.checked = v; });
@@ -831,14 +853,15 @@ window.toggleAllPerms = function(v) {
 window.savePerms = function(uname) {
   var perms = ALL_PERMS.filter(function(p) { var el = document.getElementById("perm_" + p); return el && el.checked; });
   if (!perms.length) return toast("Keep at least 1 permission", "error");
-  loadAll().then(function() {
-    var arr = ADMINS.map(function(x) { return x.username === uname ? Object.assign({}, x, { perms: perms }) : x; });
-    ADMINS = arr;
-    saveAdmins(arr).then(function() {
-      document.getElementById("permModal").remove();
-      toast("✅ Permissions updated", "success");
-      render("admin_users", {});
-    });
+  var a = ADMINS.find(function(x) { return x.username === uname; });
+  if (!a) return;
+  var updated = Object.assign({}, a, { perms: perms });
+  sb.from("admins").upsert(denormA(updated)).then(function(res) {
+    if (res.error) { toast("❌ " + res.error.message, "error"); return; }
+    ADMINS = ADMINS.map(function(x) { return x.username === uname ? updated : x; });
+    document.getElementById("permModal").remove();
+    toast("✅ Permissions updated", "success");
+    render("admin_users", {});
   });
 };
 window.changeAdminPwd = function(uname) {
@@ -849,28 +872,56 @@ window.changeAdminPwd = function(uname) {
     onConfirm: function(v) {
       var p = v.p || "";
       if (p.length < 6) return toast("Password must be 6+", "error");
-      loadAll().then(function() {
-        var arr = ADMINS.map(function(x) { return x.username === uname ? Object.assign({}, x, { passHash: hashPin(p), password_changed_at: Date.now() }) : x; });
-        ADMINS = arr;
-        saveAdmins(arr).then(function() {
-          toast("✅ Password updated", "success");
-          render("admin_users", {});
-        });
+      var a = ADMINS.find(function(x) { return x.username === uname; });
+      if (!a) return;
+      var updated = Object.assign({}, a, { passHash: hashPin(p), password_changed_at: Date.now() });
+      sb.from("admins").upsert(denormA(updated)).then(function(res) {
+        if (res.error) { toast("❌ " + res.error.message, "error"); return; }
+        ADMINS = ADMINS.map(function(x) { return x.username === uname ? updated : x; });
+        toast("✅ Password updated", "success");
+        render("admin_users", {});
       });
     }
   });
 };
 window.promoteAdmin = function(uname) {
   confirmSheet({ title: "Promote to Owner?", message: uname + " will get full access to everything.", yesText: "Promote",
-    onYes: function() { loadAll().then(function() { var arr = ADMINS.map(function(x) { return x.username === uname ? Object.assign({}, x, { role: "owner", perms: ALL_PERMS.slice() }) : x; }); ADMINS = arr; saveAdmins(arr).then(function() { toast("👑 Promoted", "success"); render("admin_users", {}); }); }); } });
+    onYes: function() {
+      var a = ADMINS.find(function(x) { return x.username === uname; });
+      if (!a) return;
+      var updated = Object.assign({}, a, { role: "owner", perms: ALL_PERMS.slice() });
+      sb.from("admins").upsert(denormA(updated)).then(function(res) {
+        if (res.error) { toast("❌ " + res.error.message, "error"); return; }
+        ADMINS = ADMINS.map(function(x) { return x.username === uname ? updated : x; });
+        toast("👑 Promoted", "success");
+        render("admin_users", {});
+      });
+    } });
 };
 window.demoteAdmin = function(uname) {
   confirmSheet({ title: "Demote to Staff?", message: uname + " will lose full owner access.", yesText: "Demote",
-    onYes: function() { loadAll().then(function() { var arr = ADMINS.map(function(x) { return x.username === uname ? Object.assign({}, x, { role: "admin" }) : x; }); ADMINS = arr; saveAdmins(arr).then(function() { toast("Demoted", "warn"); render("admin_users", {}); }); }); } });
+    onYes: function() {
+      var a = ADMINS.find(function(x) { return x.username === uname; });
+      if (!a) return;
+      var updated = Object.assign({}, a, { role: "admin" });
+      sb.from("admins").upsert(denormA(updated)).then(function(res) {
+        if (res.error) { toast("❌ " + res.error.message, "error"); return; }
+        ADMINS = ADMINS.map(function(x) { return x.username === uname ? updated : x; });
+        toast("Demoted", "warn");
+        render("admin_users", {});
+      });
+    } });
 };
 window.removeAdmin = function(uname) {
   confirmSheet({ title: "Remove " + uname + "?", message: "They will lose access immediately. This cannot be undone.", yesText: "Remove", danger: true,
-    onYes: function() { loadAll().then(function() { var arr = ADMINS.filter(function(x) { return x.username !== uname; }); ADMINS = arr; saveAdmins(arr).then(function() { toast("🗑 Removed", "success"); render("admin_users", {}); }); }); } });
+    onYes: function() {
+      sb.from("admins").delete().eq("username", uname).then(function(res) {
+        if (res.error) { toast("❌ " + res.error.message, "error"); return; }
+        ADMINS = ADMINS.filter(function(x) { return x.username !== uname; });
+        toast("🗑 Removed", "success");
+        render("admin_users", {});
+      });
+    } });
 };
 
 R.newsale = function() {
@@ -902,9 +953,9 @@ window.saveSale = function() {
       var total = e.fixed || 0;
       if (!e.fixed && bk.time) total = (e.prices[bk.time] || 0) * bk.players;
       var s = { id: newBID(), name: n, phone: "", expId: e.id, expName: e.name, items: items, total: total, minutes: isMem ? 1800 : (bk.time || 60), players: bk.players, method: "cash", paid: false, status: "pending", createdAt: Date.now(), customerId: null, isMembership: isMem };
-      loadAll().then(function() {
-        var arr = [s].concat(SESS); var old = SESS; SESS = arr;
-        syncTable("sessions", arr, old, denormS);
+      sb.from("sessions").insert(denormS(s)).then(function(res) {
+        if (res.error) { toast("❌ " + res.error.message, "error"); return; }
+        SESS = [s].concat(SESS);
         bk = null;
         toast("✅ Saved ₹" + total, "success");
         go("payments");
