@@ -499,6 +499,7 @@ R.more = function() {
   if (can("menu")) cards += '<div class="card click" onclick="go(\'menu\')"><div style="font-weight:700">🍟 Menu Manager</div><div class="sub" style="margin:4px 0 0;font-size:13px">' + ADD.length + ' items</div></div>';
   if (can("tournaments")) cards += '<div class="card click" onclick="go(\'tourneys\')"><div style="font-weight:700">🏆 Tournaments</div><div class="sub" style="margin:4px 0 0;font-size:13px">' + TOURN.length + ' events</div></div>';
   if (can("reports")) cards += '<div class="card click" onclick="go(\'reports\')"><div style="font-weight:700">📊 Reports</div></div>';
+  if (can("settings")) cards += '<div class="card click" onclick="go(\'settings\')"><div style="font-weight:700">⚙ Settings</div><div class="sub" style="margin:4px 0 0;font-size:13px">Café info · prices · loyalty</div></div>';
   return '<div class="screen"><div class="wrap"><h1 style="font-size:22px">More</h1><p class="sub">' + (me && me.role === "owner" ? "👑 Owner" : "Admin") + ' · ' + (me ? me.username : "") + '</p>' + cards + '<button class="btn dark" style="margin-top:20px" onclick="window.location.href=\'index.html\'">← Back to Customer App</button><button class="btn danger" style="margin-top:8px" onclick="doLogout()">Sign Out</button></div></div>';
 };
 
@@ -614,6 +615,111 @@ R.reports = function() {
   return '<div class="screen"><div class="wrap"><a href="javascript:go(\'more\')" style="color:var(--muted);font-size:13px">← More</a><h1 style="margin-top:20px">Reports</h1><div class="grid4"><div class="stat"><div class="v">₹' + tr + '</div><div class="l">Revenue</div></div><div class="stat"><div class="v" style="color:var(--green)">₹' + cash + '</div><div class="l">Cash</div></div><div class="stat"><div class="v" style="color:var(--cyan)">₹' + upi + '</div><div class="l">UPI</div></div><div class="stat"><div class="v" style="color:var(--gold-bright)">₹' + pts + '</div><div class="l">Points</div></div></div></div></div>';
 };
 
+/* ============================================================
+   SETTINGS PAGE — staff can edit café info, prices, loyalty
+   ============================================================ */
+R.settings = function() {
+  if (!can("settings")) return R.denied();
+  var s = (SETTINGS && SETTINGS.cafe) || {};
+  var l = (SETTINGS && SETTINGS.loyalty) || {};
+  var exps = (SETTINGS && SETTINGS.experiences) || EXP;
+
+  var expHTML = exps.map(function(e, i) {
+    var priceFields = "";
+    if (e.fixed) {
+      priceFields = '<label>Fixed Price ₹</label><input type="number" data-exp="' + i + '" data-field="fixed" value="' + (e.fixed || 0) + '">';
+    } else if (e.prices) {
+      priceFields = '<div class="sec-label" style="margin-top:10px">Prices</div><div class="grid2">' +
+        Object.keys(e.prices).map(function(d) {
+          return '<div><label>' + d + ' min (₹)</label><input type="number" data-exp="' + i + '" data-field="price_' + d + '" value="' + e.prices[d] + '"></div>';
+        }).join("") + '</div>';
+    }
+    return '<div class="card">' +
+      '<div style="font-weight:800;color:var(--gold);margin-bottom:10px;font-size:15px">' + esc(e.name) + '</div>' +
+      '<label>Name</label><input type="text" data-exp="' + i + '" data-field="name" value="' + esc(e.name) + '">' +
+      '<label>Subtitle</label><input type="text" data-exp="' + i + '" data-field="sub" value="' + esc(e.sub || "") + '">' +
+      priceFields +
+      '</div>';
+  }).join("");
+
+  return '<div class="screen"><div class="wrap" style="max-width:560px">' +
+    '<a href="javascript:go(\'more\')" style="color:var(--muted);font-size:13px">← More</a>' +
+    '<h1 style="margin-top:20px">Settings</h1>' +
+    '<p class="sub">Changes apply instantly to customer app</p>' +
+
+    '<div class="sec-label">📍 Café Info</div>' +
+    '<div class="card">' +
+      '<label>Phone</label><input id="set_phone" value="' + esc(s.phone || "") + '">' +
+      '<label>Hours</label><input id="set_hours" value="' + esc(s.hours || "") + '">' +
+      '<label>Address</label><input id="set_address" value="' + esc(s.address || "") + '">' +
+    '</div>' +
+
+    '<div class="sec-label">💰 Loyalty Settings</div>' +
+    '<div class="card">' +
+      '<div class="grid2">' +
+        '<div><label>₹ per point</label><input id="set_rr" type="number" value="' + (l.RR || 20) + '"></div>' +
+        '<div><label>Points per free hour</label><input id="set_pph" type="number" value="' + (l.POINTS_PER_HOUR || 1000) + '"></div>' +
+      '</div>' +
+      '<div class="grid2">' +
+        '<div><label>Referral bonus</label><input id="set_ref" type="number" value="' + (l.REF_BONUS || 50) + '"></div>' +
+        '<div><label>Birthday bonus</label><input id="set_bday" type="number" value="' + (l.BDAY_BONUS || 100) + '"></div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="sec-label">🎮 Experiences & Prices</div>' +
+    '<div id="exp_editor">' + expHTML + '</div>' +
+
+    '<button class="btn" style="margin-top:20px" onclick="saveAllSettings()">💾 Save All Changes</button>' +
+    '<div class="notice green" style="margin-top:14px">✅ Changes apply instantly — customers will see them on their next screen refresh.</div>' +
+  '</div></div>';
+};
+
+window.saveAllSettings = function() {
+  var s = {
+    cafe: {
+      phone: document.getElementById("set_phone").value.trim(),
+      hours: document.getElementById("set_hours").value.trim(),
+      address: document.getElementById("set_address").value.trim()
+    },
+    loyalty: {
+      RR: parseInt(document.getElementById("set_rr").value) || 20,
+      POINTS_PER_HOUR: parseInt(document.getElementById("set_pph").value) || 1000,
+      REF_BONUS: parseInt(document.getElementById("set_ref").value) || 50,
+      BDAY_BONUS: parseInt(document.getElementById("set_bday").value) || 100
+    },
+    experiences: []
+  };
+
+  var exps = (SETTINGS && SETTINGS.experiences) || EXP;
+  exps.forEach(function(e, i) {
+    var ne = JSON.parse(JSON.stringify(e));
+    var nameEl = document.querySelector('[data-exp="' + i + '"][data-field="name"]');
+    var subEl = document.querySelector('[data-exp="' + i + '"][data-field="sub"]');
+    if (nameEl) ne.name = nameEl.value.trim();
+    if (subEl) ne.sub = subEl.value.trim();
+
+    if (ne.fixed) {
+      var fxEl = document.querySelector('[data-exp="' + i + '"][data-field="fixed"]');
+      if (fxEl) ne.fixed = parseInt(fxEl.value) || 0;
+      ne.from = ne.fixed;
+    } else if (ne.prices) {
+      Object.keys(ne.prices).forEach(function(d) {
+        var el = document.querySelector('[data-exp="' + i + '"][data-field="price_' + d + '"]');
+        if (el) ne.prices[d] = parseInt(el.value) || 0;
+      });
+      var vals = Object.keys(ne.prices).map(function(k) { return ne.prices[k]; });
+      ne.from = Math.min.apply(null, vals);
+    }
+    s.experiences.push(ne);
+  });
+
+  saveSettings(s).then(function(res) {
+    if (res && res.error) { alert("❌ " + res.error.message); return; }
+    alert("✅ Settings saved!\n\nCustomers will see changes immediately.");
+    render("settings", {});
+  });
+};
+
 R.newsale = function() {
   if (!bk) bk = { exp: null, time: null, players: 1 };
   var e = EXP.find(function(x) { return x.id === bk.exp; });
@@ -659,7 +765,7 @@ window.saveSale = function() {
 function setupAdminRealtime() {
   if (!sb) return;
   try { sb.removeAllChannels(); } catch(e) {}
-  ["customers", "sessions", "requests", "tournaments", "addons"].forEach(function(t) {
+  ["customers", "sessions", "requests", "tournaments", "addons", "settings"].forEach(function(t) {
     try {
       sb.channel("admin-" + t).on("postgres_changes", { event: "*", schema: "public", table: t }, function(payload) {
         loadAll().then(function() { if (curR) render(curR, {}); });
