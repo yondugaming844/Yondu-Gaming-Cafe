@@ -1,4 +1,4 @@
-/* YONDU ADMIN PANEL */
+/* YONDU ADMIN PANEL — v2 with in-app modals */
 
 var curR = "", bk = null, tab = "dash";
 var ALL_PERMS = ["floor","pay","requests","customers","menu","tournaments","reports","settings"];
@@ -18,6 +18,76 @@ function can(p) {
   return (me.perms || []).indexOf(p) >= 0;
 }
 function isOwner() { var m = getMe(); return m && m.role === "owner"; }
+
+/* ============================================================
+   IN-APP MODAL SYSTEM (replaces alert / prompt / confirm)
+   ============================================================ */
+function toast(msg, type) {
+  var colors = { success: "#22c55e", error: "#ef4444", info: "#22d3ee", warn: "#fb923c" };
+  var el = document.createElement("div");
+  el.style.cssText = "position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:" + (colors[type] || colors.info) + ";color:#fff;padding:12px 22px;border-radius:12px;font-weight:800;z-index:9999;box-shadow:0 12px 40px rgba(0,0,0,.5);font-size:14px;max-width:90%;text-align:center;transition:transform .3s cubic-bezier(.2,.9,.3,1.3)";
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(function() { el.style.transform = "translateX(-50%) translateY(0)"; }, 20);
+  setTimeout(function() { el.style.transform = "translateX(-50%) translateY(-100px)"; }, 2200);
+  setTimeout(function() { el.remove(); }, 2700);
+}
+
+var _sheetOnConfirm = null;
+
+function openSheet(opts) {
+  var m = document.createElement("div");
+  m.id = "ysheet";
+  m.className = "modal";
+  var fieldsHTML = (opts.fields || []).map(function(f) {
+    if (f.type === "info") return '<div class="notice gold" style="margin-bottom:12px">' + f.value + '</div>';
+    if (f.type === "notice") return '<div class="notice ' + (f.color || "") + '" style="margin-bottom:12px">' + f.value + '</div>';
+    if (f.type === "select") {
+      return '<label>' + f.label + '</label><select id="' + f.id + '">' +
+        (f.options || []).map(function(o) {
+          return '<option value="' + o.value + '"' + (o.value === f.value ? " selected" : "") + '>' + o.label + '</option>';
+        }).join("") +
+        '</select>';
+    }
+    if (f.type === "textarea") {
+      return '<label>' + f.label + '</label><textarea id="' + f.id + '" rows="3" placeholder="' + (f.placeholder || "") + '">' + (f.value || "") + '</textarea>';
+    }
+    return '<label>' + f.label + '</label><input id="' + f.id + '" type="' + (f.type || "text") + '" value="' + (f.value || "") + '" placeholder="' + (f.placeholder || "") + '">';
+  }).join("");
+  m.innerHTML = '<div class="sheet"><h2>' + opts.title + '</h2>' +
+    (opts.subtitle ? '<div class="s">' + opts.subtitle + '</div>' : "") +
+    fieldsHTML +
+    '<button class="btn ' + (opts.danger ? "danger" : "") + '" id="ysheet_ok" style="margin-top:8px">' + (opts.confirmText || "Save") + '</button>' +
+    '<button class="btn dark" id="ysheet_cancel" style="margin-top:8px">Cancel</button></div>';
+  document.body.appendChild(m);
+  _sheetOnConfirm = opts.onConfirm;
+  m.querySelector("#ysheet_ok").onclick = function() {
+    var vals = {};
+    m.querySelectorAll("input, select, textarea").forEach(function(el) { if (el.id) vals[el.id] = el.value; });
+    m.remove();
+    var cb = _sheetOnConfirm;
+    _sheetOnConfirm = null;
+    if (cb) cb(vals);
+  };
+  m.querySelector("#ysheet_cancel").onclick = function() { m.remove(); _sheetOnConfirm = null; };
+  setTimeout(function() {
+    var inp = m.querySelector("input:not([type=hidden]), select, textarea");
+    if (inp) inp.focus();
+  }, 60);
+}
+
+function confirmSheet(opts) {
+  var m = document.createElement("div");
+  m.id = "yconfirm";
+  m.className = "modal";
+  m.innerHTML = '<div class="sheet"><h2>' + opts.title + '</h2>' +
+    (opts.message ? '<div class="s" style="white-space:pre-line">' + opts.message + '</div>' : "") +
+    '<button class="btn ' + (opts.danger ? "danger" : "") + '" id="yconf_yes">' + (opts.yesText || "Yes") + '</button>' +
+    '<button class="btn dark" id="yconf_no" style="margin-top:8px">Cancel</button></div>';
+  document.body.appendChild(m);
+  m.querySelector("#yconf_yes").onclick = function() { m.remove(); if (opts.onYes) opts.onYes(); };
+  m.querySelector("#yconf_no").onclick = function() { m.remove(); };
+}
 
 function notifyAdmin(msg) {
   var el = document.createElement("div");
@@ -86,17 +156,17 @@ window.claimOwner = function() {
   var u = document.getElementById("oau").value.trim().toLowerCase();
   var p = document.getElementById("oap").value;
   var p2 = document.getElementById("oap2").value;
-  if (!u || u.length < 3) return alert("Username 3+");
-  if (!/^[a-z0-9_]+$/.test(u)) return alert("Letters, numbers, underscore only");
-  if (!p || p.length < 6) return alert("Password 6+");
-  if (p !== p2) return alert("Don't match");
+  if (!u || u.length < 3) return toast("Username 3+", "error");
+  if (!/^[a-z0-9_]+$/.test(u)) return toast("Letters, numbers, underscore only", "error");
+  if (!p || p.length < 6) return toast("Password 6+", "error");
+  if (p !== p2) return toast("Passwords don't match", "error");
   loadAll().then(function() {
-    if (ADMINS.length) return alert("Owner already exists.");
+    if (ADMINS.length) return toast("Owner already exists", "error");
     var newA = { username: u, passHash: hashPin(p), role: "owner", perms: ALL_PERMS.slice(), createdAt: Date.now() };
     ADMINS = [newA];
     saveAdmins(ADMINS).then(function() {
       DB.set("yondu_admin_session", u);
-      alert("✅ Owner created!");
+      toast("✅ Owner created!", "success");
       go("floor");
     });
   });
@@ -108,19 +178,26 @@ R.login = function() {
 window.doLogin = function() {
   var u = document.getElementById("au").value.trim().toLowerCase();
   var p = document.getElementById("ap").value;
-  if (!u || !p) return alert("Enter username & password");
+  if (!u || !p) return toast("Enter username & password", "error");
   loadAll().then(function() {
     if (!ADMINS.length) { go("claim_owner"); return; }
     var a = ADMINS.find(function(x) { return x.username.toLowerCase() === u; });
-    if (!a || hashPin(p) !== a.passHash) return alert("Wrong username or password");
+    if (!a || hashPin(p) !== a.passHash) return toast("Wrong username or password", "error");
     DB.set("yondu_admin_session", a.username);
     go("floor");
   });
 };
 window.doLogout = function() {
-  if (!confirm("Sign out?")) return;
-  DB.del("yondu_admin_session");
-  go("login");
+  confirmSheet({
+    title: "Sign Out?",
+    message: "You'll need to log in again.",
+    yesText: "Sign Out",
+    danger: true,
+    onYes: function() {
+      DB.del("yondu_admin_session");
+      go("login");
+    }
+  });
 };
 
 R.floor = function() {
@@ -171,23 +248,33 @@ R.floor.after = function() {
     });
   }, 1000);
 };
+
 window.startAt = function(stId) {
   loadAll().then(function() {
     var pend = SESS.filter(function(s) { return !s.stationId && s.status !== "ended" && s.paid && s.expId !== "snacks"; });
     var pendB = SESS.filter(function(s) { return !s.stationId && s.status === "pending" && s.expId !== "snacks"; });
     var all = pend.concat(pendB);
-    if (!all.length) { alert("No pending sessions."); return; }
-    var list = all.slice(0, 10).map(function(s) { return "• " + s.id + " — " + s.name + " (" + (s.paid ? "PAID" : "unpaid") + ")"; }).join("\n");
-    var ch = prompt("Start which session?\n\n" + list + "\n\nEnter ID:");
-    if (!ch) return;
-    var s = all.find(function(x) { return x.id.toUpperCase() === ch.trim().toUpperCase(); });
-    if (!s) { alert("Not found"); return; }
-    if (s.status === "pending") { if (!confirm("Booking unpaid. Mark as paid?")) return; s.paid = true; }
-    s.status = "playing"; s.stationId = stId; s.start = Date.now();
-    s.end = Date.now() + (s.minutes || 60) * 60000;
-    upsertS(s);
-    alert("✅ Started at " + STA.find(function(x) { return x.id === stId; }).name);
-    go("station", { id: stId });
+    if (!all.length) { toast("No pending sessions", "error"); return; }
+    var options = all.slice(0, 20).map(function(s) {
+      return { value: s.id, label: s.id + " — " + s.name + " (" + (s.paid ? "PAID" : "unpaid") + ")" };
+    });
+    var st = STA.find(function(x) { return x.id === stId; });
+    openSheet({
+      title: "▶ Start Session",
+      subtitle: "Station: " + (st ? st.name : ""),
+      fields: [{ id: "sessid", label: "Pick a pending booking", type: "select", options: options, value: options[0].value }],
+      confirmText: "▶ Start Now",
+      onConfirm: function(vals) {
+        var s = all.find(function(x) { return x.id === vals.sessid; });
+        if (!s) return;
+        if (s.status === "pending") s.paid = true;
+        s.status = "playing"; s.stationId = stId; s.start = Date.now();
+        s.end = Date.now() + (s.minutes || 60) * 60000;
+        upsertS(s);
+        toast("✅ Started at " + st.name, "success");
+        go("station", { id: stId });
+      }
+    });
   });
 };
 
@@ -221,53 +308,106 @@ R.station.after = function(p) {
 };
 
 window.aAdd = function(sid) {
-  var name = prompt("Item name?", "Water");
-  if (!name) return;
-  var price = parseInt(prompt("Price ₹?", "20"));
-  if (!price) return;
-  loadAll().then(function() {
-    var s2 = getSess(sid);
-    if (!s2) return;
-    s2.items.push(name); s2.total += price;
-    upsertS(s2);
-    alert("✅ Added ₹" + price);
-    render("station", { id: s2.stationId });
+  var menuOptions = ADD.map(function(a) { return { value: a.id, label: a.name + " — ₹" + a.price }; });
+  menuOptions.push({ value: "__custom", label: "✏️ Custom item…" });
+  openSheet({
+    title: "🍟 Add Snacks",
+    subtitle: "Pick from menu or enter custom",
+    fields: [
+      { id: "pick", label: "Menu item", type: "select", options: menuOptions, value: menuOptions[0].value },
+      { id: "cname", label: "Custom name (if custom)", type: "text", placeholder: "e.g. Extra samosa" },
+      { id: "cprice", label: "Custom price ₹ (if custom)", type: "number", placeholder: "20" },
+      { id: "qty", label: "Quantity", type: "number", value: "1" }
+    ],
+    confirmText: "Add to Bill",
+    onConfirm: function(v) {
+      var qty = Math.max(1, parseInt(v.qty) || 1);
+      var name, price;
+      if (v.pick === "__custom") {
+        name = (v.cname || "").trim();
+        price = parseInt(v.cprice) || 0;
+        if (!name || !price) return toast("Enter custom name & price", "error");
+      } else {
+        var a = ADD.find(function(x) { return x.id === v.pick; });
+        if (!a) return;
+        name = a.name; price = a.price;
+      }
+      loadAll().then(function() {
+        var s2 = getSess(sid);
+        if (!s2) return;
+        for (var i = 0; i < qty; i++) s2.items.push(name);
+        s2.total += price * qty;
+        upsertS(s2);
+        toast("✅ Added " + qty + "× " + name, "success");
+        render("station", { id: s2.stationId });
+      });
+    }
   });
 };
+
 window.aExt = function(sid) {
-  var add = parseInt(prompt("Add minutes?", "30"));
-  if (!add) return;
-  var rate = parseInt(prompt("Rate ₹?", "100")) || 0;
-  var pl = parseInt(prompt("Players?", "1")) || 1;
-  var amt = rate * pl;
-  loadAll().then(function() {
-    var s2 = getSess(sid);
-    if (!s2) return;
-    s2.end = Math.max(Date.now(), s2.end || Date.now()) + add * 60000;
-    s2.minutes = (s2.minutes || 0) + add;
-    s2.total += amt;
-    upsertS(s2);
-    alert("✅ +" + add + "min · ₹" + amt);
-    render("station", { id: s2.stationId });
+  openSheet({
+    title: "⏱ Add Time",
+    subtitle: "Extend the session",
+    fields: [
+      { id: "min", label: "Minutes to add", type: "number", value: "30" },
+      { id: "rate", label: "Rate ₹ (per player)", type: "number", value: "100" },
+      { id: "pl", label: "Players", type: "number", value: "1" }
+    ],
+    confirmText: "Add Time",
+    onConfirm: function(v) {
+      var add = parseInt(v.min) || 0;
+      if (!add) return toast("Enter minutes", "error");
+      var rate = parseInt(v.rate) || 0;
+      var pl = parseInt(v.pl) || 1;
+      var amt = rate * pl;
+      loadAll().then(function() {
+        var s2 = getSess(sid);
+        if (!s2) return;
+        s2.end = Math.max(Date.now(), s2.end || Date.now()) + add * 60000;
+        s2.minutes = (s2.minutes || 0) + add;
+        s2.total += amt;
+        upsertS(s2);
+        toast("✅ +" + add + "min · ₹" + amt, "success");
+        render("station", { id: s2.stationId });
+      });
+    }
   });
 };
+
 window.aEnd = function(sid) {
   loadAll().then(function() {
     var s2 = getSess(sid);
     if (!s2) return;
     var played = Math.max(0, Math.floor((Date.now() - (s2.start || Date.now())) / 60000));
-    if (!confirm("End session?\n\nPlayed: " + played + " min\nTotal: ₹" + s2.total)) return;
-    s2.status = "ended";
-    upsertS(s2);
-    alert("✅ Ended");
-    go("floor");
+    confirmSheet({
+      title: "End Session?",
+      message: "Played: " + played + " min\nTotal: ₹" + s2.total,
+      yesText: "⏹ End Session",
+      danger: true,
+      onYes: function() {
+        s2.status = "ended";
+        upsertS(s2);
+        toast("✅ Session ended", "success");
+        go("floor");
+      }
+    });
   });
 };
+
 window.delSess = function(sid) {
-  if (!confirm("Delete session?")) return;
-  loadAll().then(function() {
-    saveS(SESS.filter(function(x) { return x.id !== sid; }));
-    go("floor");
+  confirmSheet({
+    title: "Delete Session?",
+    message: "This cannot be undone.",
+    yesText: "Delete",
+    danger: true,
+    onYes: function() {
+      loadAll().then(function() {
+        saveS(SESS.filter(function(x) { return x.id !== sid; }));
+        toast("🗑 Deleted", "success");
+        go("floor");
+      });
+    }
   });
 };
 
@@ -282,51 +422,64 @@ R.payments = function() {
   }).join("") : '<div class="empty"><div class="big">✓</div><div class="msg">ALL CLEAR</div></div>';
   return '<div class="screen"><div class="wrap"><h1 style="font-size:22px">Payments</h1><p class="sub">Confirm cash → assign station</p>' + (col.length ? '<div class="notice orange">⚠ <b>' + col.length + '</b> playing but unpaid</div>' : "") + cards + '</div></div>';
 };
+
 window.collect = function(sid) {
   var s = getSess(sid);
   if (!s) return;
   var c = s.customerId ? CUST.find(function(x) { return x.id === s.customerId; }) : null;
-  var method = prompt("Payment method? (cash/upi/points)\n\nAmount: ₹" + s.total, "cash");
-  if (!method) return;
-  var m = method.toLowerCase().trim();
-  var usePoints = false;
-  if (m === "points") {
-    if (!c) return alert("No customer");
-    if (c.points < s.total) return alert("Not enough points");
-    usePoints = true;
-  }
-  loadAll().then(function() {
-    var s2 = getSess(sid);
-    if (!s2) return;
-    if (usePoints && c) {
-      c.points = c.points - s2.total;
-      s2.method = "points";
-      var arr = CUST.slice();
-      var i = arr.findIndex(function(x) { return x.id === c.id; });
-      if (i >= 0) arr[i] = c;
-      saveC(arr);
-    } else {
-      s2.method = (m === "upi") ? "upi" : "cash";
-    }
-    s2.paid = true;
-    if (!usePoints && s2.customerId) {
-      var c2 = CUST.find(function(x) { return x.id === s2.customerId; });
-      if (c2) {
-        var earned = Math.floor(s2.total / RR);
-        c2.points = Math.min(POINTS_MAX, (c2.points || 0) + earned);
-        c2.pointsSpent = (c2.pointsSpent || 0) + earned;
-        c2.totalSpent += s2.total;
-        c2.visits += 1;
-        s2.pointsEarned = earned;
-        var arr2 = CUST.slice();
-        var i2 = arr2.findIndex(function(x) { return x.id === c2.id; });
-        if (i2 >= 0) arr2[i2] = c2;
-        saveC(arr2);
+  openSheet({
+    title: "💰 Collect Payment",
+    subtitle: s.name + " · " + s.items.join(", "),
+    fields: [
+      { type: "info", value: "Total: <b style='color:var(--gold-bright);font-size:20px'>₹" + s.total + "</b>" + (c ? "<br>Customer points: <b>" + c.points + "</b>" : "") },
+      { id: "method", label: "Payment method", type: "select", options: [
+        { value: "cash", label: "💵 Cash" },
+        { value: "upi", label: "📱 UPI" },
+        { value: "points", label: "🎁 Points" + (c ? " (" + c.points + " available)" : " (no customer)") }
+      ], value: "cash" }
+    ],
+    confirmText: "✅ Confirm Payment",
+    onConfirm: function(v) {
+      var m = v.method;
+      var usePoints = m === "points";
+      if (usePoints) {
+        if (!c) return toast("No customer linked", "error");
+        if (c.points < s.total) return toast("Not enough points", "error");
       }
+      loadAll().then(function() {
+        var s2 = getSess(sid);
+        if (!s2) return;
+        if (usePoints && c) {
+          c.points -= s2.total;
+          s2.method = "points";
+          var arr = CUST.slice();
+          var i = arr.findIndex(function(x) { return x.id === c.id; });
+          if (i >= 0) arr[i] = c;
+          saveC(arr);
+        } else {
+          s2.method = m;
+        }
+        s2.paid = true;
+        if (!usePoints && s2.customerId) {
+          var c2 = CUST.find(function(x) { return x.id === s2.customerId; });
+          if (c2) {
+            var earned = Math.floor(s2.total / RR);
+            c2.points = Math.min(POINTS_MAX, (c2.points || 0) + earned);
+            c2.pointsSpent = (c2.pointsSpent || 0) + earned;
+            c2.totalSpent += s2.total;
+            c2.visits += 1;
+            s2.pointsEarned = earned;
+            var arr2 = CUST.slice();
+            var i2 = arr2.findIndex(function(x) { return x.id === c2.id; });
+            if (i2 >= 0) arr2[i2] = c2;
+            saveC(arr2);
+          }
+        }
+        upsertS(s2);
+        toast("✅ Collected ₹" + s2.total, "success");
+        render("payments", {});
+      });
     }
-    upsertS(s2);
-    alert("✅ Collected ₹" + s2.total);
-    render("payments", {});
   });
 };
 
@@ -353,15 +506,24 @@ window.activateCust = function(cid) {
     var i = arr.findIndex(function(x) { return x.id === cid; });
     if (i >= 0) arr[i] = c;
     saveC(arr);
-    alert("✅ " + c.name + " activated!");
-    render("requests", {});
+    toast("✅ " + c.name + " activated", "success");
+    render(curR, {});
   });
 };
 window.deleteCust = function(cid) {
-  if (!confirm("Delete this customer?")) return;
-  loadAll().then(function() {
-    saveC(CUST.filter(function(x) { return x.id !== cid; }));
-    render("requests", {});
+  var c = CUST.find(function(x) { return x.id === cid; });
+  confirmSheet({
+    title: "Delete Customer?",
+    message: "Delete " + (c ? c.name : "this customer") + "?\nThis cannot be undone.",
+    yesText: "Delete",
+    danger: true,
+    onYes: function() {
+      loadAll().then(function() {
+        saveC(CUST.filter(function(x) { return x.id !== cid; }));
+        toast("🗑 Deleted", "success");
+        render("requests", {});
+      });
+    }
   });
 };
 window.approveReq = function(rid) {
@@ -381,19 +543,26 @@ window.approveReq = function(rid) {
     r2.status = "approved";
     r2.processedAt = Date.now();
     upsertReq(r2);
-    alert("✅ Approved");
+    toast("✅ Approved", "success");
     render("requests", {});
   });
 };
 window.rejectReq = function(rid) {
-  if (!confirm("Reject?")) return;
-  loadAll().then(function() {
-    var r2 = REQ.find(function(x) { return x.id === rid; });
-    if (!r2) return;
-    r2.status = "rejected";
-    r2.processedAt = Date.now();
-    upsertReq(r2);
-    render("requests", {});
+  confirmSheet({
+    title: "Reject Request?",
+    yesText: "Reject",
+    danger: true,
+    onYes: function() {
+      loadAll().then(function() {
+        var r2 = REQ.find(function(x) { return x.id === rid; });
+        if (!r2) return;
+        r2.status = "rejected";
+        r2.processedAt = Date.now();
+        upsertReq(r2);
+        toast("Rejected", "warn");
+        render("requests", {});
+      });
+    }
   });
 };
 
@@ -419,52 +588,81 @@ window.filtC = function(q) {
 window.editPts = function(cid) {
   var c = CUST.find(function(x) { return x.id === cid; });
   if (!c) return;
-  var v = prompt("Points for " + c.name + "\nCurrent: " + c.points + "\nNew:", c.points);
-  if (v === null) return;
-  var n = parseInt(v);
-  if (isNaN(n)) return alert("Number");
-  loadAll().then(function() {
-    var c2 = CUST.find(function(x) { return x.id === cid; });
-    if (!c2) return;
-    c2.points = n;
-    var arr = CUST.slice();
-    var i = arr.findIndex(function(x) { return x.id === cid; });
-    if (i >= 0) arr[i] = c2;
-    saveC(arr);
-    render("customers", {});
+  openSheet({
+    title: "💰 Edit Points",
+    subtitle: c.name + " · #" + c.id,
+    fields: [{ id: "pts", label: "Points", type: "number", value: String(c.points || 0) }],
+    confirmText: "Save Points",
+    onConfirm: function(v) {
+      var n = parseInt(v.pts);
+      if (isNaN(n)) return toast("Enter a number", "error");
+      loadAll().then(function() {
+        var c2 = CUST.find(function(x) { return x.id === cid; });
+        if (!c2) return;
+        c2.points = n;
+        var arr = CUST.slice();
+        var i = arr.findIndex(function(x) { return x.id === cid; });
+        if (i >= 0) arr[i] = c2;
+        saveC(arr);
+        toast("✅ Points updated", "success");
+        render("customers", {});
+      });
+    }
   });
 };
 window.editHrs = function(cid) {
   var c = CUST.find(function(x) { return x.id === cid; });
   if (!c) return;
-  var p = parseFloat(prompt("PS5 hours:", c.ps5Hours || 0));
-  if (isNaN(p)) return;
-  var r = parseFloat(prompt("Racing hours:", c.raceHours || 0));
-  if (isNaN(r)) return;
-  loadAll().then(function() {
-    var c2 = CUST.find(function(x) { return x.id === cid; });
-    if (!c2) return;
-    c2.ps5Hours = Math.max(0, p);
-    c2.raceHours = Math.max(0, r);
-    var arr = CUST.slice();
-    var i = arr.findIndex(function(x) { return x.id === cid; });
-    if (i >= 0) arr[i] = c2;
-    saveC(arr);
-    render("customers", {});
+  openSheet({
+    title: "🎫 Membership Hours",
+    subtitle: c.name,
+    fields: [
+      { id: "ps5", label: "PS5 hours", type: "number", value: String(c.ps5Hours || 0) },
+      { id: "race", label: "Racing hours", type: "number", value: String(c.raceHours || 0) }
+    ],
+    confirmText: "Save Hours",
+    onConfirm: function(v) {
+      var p = parseFloat(v.ps5) || 0;
+      var r = parseFloat(v.race) || 0;
+      loadAll().then(function() {
+        var c2 = CUST.find(function(x) { return x.id === cid; });
+        if (!c2) return;
+        c2.ps5Hours = Math.max(0, p);
+        c2.raceHours = Math.max(0, r);
+        var arr = CUST.slice();
+        var i = arr.findIndex(function(x) { return x.id === cid; });
+        if (i >= 0) arr[i] = c2;
+        saveC(arr);
+        toast("✅ Hours updated", "success");
+        render("customers", {});
+      });
+    }
   });
 };
 window.resetPin = function(cid) {
+  var c = CUST.find(function(x) { return x.id === cid; });
+  if (!c) return;
   var p = String(Math.floor(1000 + Math.random() * 9000));
-  loadAll().then(function() {
-    var c = CUST.find(function(x) { return x.id === cid; });
-    if (!c) return;
-    c.pinHash = hashPin(p);
-    var arr = CUST.slice();
-    var i = arr.findIndex(function(x) { return x.id === cid; });
-    if (i >= 0) arr[i] = c;
-    saveC(arr);
-    alert("✅ New PIN: " + p);
-    render("customers", {});
+  openSheet({
+    title: "🔑 Reset PIN",
+    subtitle: c.name,
+    fields: [
+      { type: "info", value: "New PIN: <b style='font-size:22px;color:var(--gold-bright);letter-spacing:4px'>" + p + "</b><br><small>Write this down and give to customer</small>" }
+    ],
+    confirmText: "✅ Confirm Reset",
+    onConfirm: function() {
+      loadAll().then(function() {
+        var c2 = CUST.find(function(x) { return x.id === cid; });
+        if (!c2) return;
+        c2.pinHash = hashPin(p);
+        var arr = CUST.slice();
+        var i = arr.findIndex(function(x) { return x.id === cid; });
+        if (i >= 0) arr[i] = c2;
+        saveC(arr);
+        toast("✅ New PIN: " + p, "success");
+        render("customers", {});
+      });
+    }
   });
 };
 window.togVIP = function(cid) {
@@ -476,20 +674,30 @@ window.togVIP = function(cid) {
     var i = arr.findIndex(function(x) { return x.id === cid; });
     if (i >= 0) arr[i] = c;
     saveC(arr);
+    toast(c.vip ? "⭐ VIP added" : "VIP removed", "success");
     render("customers", {});
   });
 };
 window.togBan = function(cid) {
-  if (!confirm("Toggle ban for this customer?")) return;
-  loadAll().then(function() {
-    var c = CUST.find(function(x) { return x.id === cid; });
-    if (!c) return;
-    c.banned = !c.banned;
-    var arr = CUST.slice();
-    var i = arr.findIndex(function(x) { return x.id === cid; });
-    if (i >= 0) arr[i] = c;
-    saveC(arr);
-    render("customers", {});
+  var c = CUST.find(function(x) { return x.id === cid; });
+  if (!c) return;
+  confirmSheet({
+    title: (c.banned ? "Unban " : "Ban ") + c.name + "?",
+    yesText: c.banned ? "Unban" : "Ban",
+    danger: !c.banned,
+    onYes: function() {
+      loadAll().then(function() {
+        var c2 = CUST.find(function(x) { return x.id === cid; });
+        if (!c2) return;
+        c2.banned = !c2.banned;
+        var arr = CUST.slice();
+        var i = arr.findIndex(function(x) { return x.id === cid; });
+        if (i >= 0) arr[i] = c2;
+        saveC(arr);
+        toast(c2.banned ? "🚫 Banned" : "✅ Unbanned", "success");
+        render("customers", {});
+      });
+    }
   });
 };
 
@@ -511,42 +719,77 @@ R.menu = function() {
   return '<div class="screen"><div class="wrap"><a href="javascript:go(\'more\')" style="color:var(--muted);font-size:13px">← More</a><h1 style="margin-top:20px">Menu Manager</h1><p class="sub">' + ADD.length + ' items</p><button class="btn" onclick="addItem()">+ Add Item</button><div style="margin-top:16px">' + cards + '</div></div></div>';
 };
 window.addItem = function() {
-  var n = prompt("Item name?");
-  if (!n) return;
-  var p = parseInt(prompt("Price ₹?", "20"));
-  if (!p) return;
-  loadAll().then(function() {
-    var id = "i" + Date.now().toString(36);
-    var arr = ADD.concat([{ id: id, name: n, price: p, points_price: p, photo: "" }]);
-    var old = ADD;
-    ADD = arr;
-    syncTable("addons", arr, old, function(r) { return { id: r.id, name: r.name, price: r.price, points_price: r.points_price || 0, photo: r.photo || "" }; });
-    render("menu", {});
+  openSheet({
+    title: "➕ Add Item",
+    fields: [
+      { id: "name", label: "Item name", type: "text", placeholder: "e.g. Mojito" },
+      { id: "price", label: "Price ₹", type: "number", placeholder: "80" },
+      { id: "pts", label: "Points price", type: "number", placeholder: "same as ₹" }
+    ],
+    confirmText: "Create Item",
+    onConfirm: function(v) {
+      var n = (v.name || "").trim();
+      if (!n) return toast("Enter a name", "error");
+      var p = parseInt(v.price) || 0;
+      if (!p) return toast("Enter a price", "error");
+      var pp = parseInt(v.pts) || p;
+      loadAll().then(function() {
+        var id = "i" + Date.now().toString(36);
+        var arr = ADD.concat([{ id: id, name: n, price: p, points_price: pp, photo: "" }]);
+        var old = ADD;
+        ADD = arr;
+        syncTable("addons", arr, old, function(r) { return { id: r.id, name: r.name, price: r.price, points_price: r.points_price || 0, photo: r.photo || "" }; });
+        toast("✅ Added " + n, "success");
+        render("menu", {});
+      });
+    }
   });
 };
 window.editItem = function(id) {
   var a = ADD.find(function(x) { return x.id === id; });
   if (!a) return;
-  var n = prompt("Name:", a.name);
-  if (!n) return;
-  var p = parseInt(prompt("Price ₹:", a.price));
-  if (!p) return;
-  loadAll().then(function() {
-    var arr = ADD.map(function(x) { return x.id === id ? Object.assign({}, x, { name: n, price: p, points_price: p }) : x; });
-    var old = ADD;
-    ADD = arr;
-    syncTable("addons", arr, old, function(r) { return { id: r.id, name: r.name, price: r.price, points_price: r.points_price || 0, photo: r.photo || "" }; });
-    render("menu", {});
+  openSheet({
+    title: "✏ Edit Item",
+    fields: [
+      { id: "name", label: "Name", type: "text", value: a.name },
+      { id: "price", label: "Price ₹", type: "number", value: String(a.price) },
+      { id: "pts", label: "Points price", type: "number", value: String(a.points_price || a.price) }
+    ],
+    confirmText: "Save Changes",
+    onConfirm: function(v) {
+      var n = (v.name || "").trim();
+      if (!n) return toast("Enter a name", "error");
+      var p = parseInt(v.price) || 0;
+      if (!p) return toast("Enter a price", "error");
+      var pp = parseInt(v.pts) || p;
+      loadAll().then(function() {
+        var arr = ADD.map(function(x) { return x.id === id ? Object.assign({}, x, { name: n, price: p, points_price: pp }) : x; });
+        var old = ADD;
+        ADD = arr;
+        syncTable("addons", arr, old, function(r) { return { id: r.id, name: r.name, price: r.price, points_price: r.points_price || 0, photo: r.photo || "" }; });
+        toast("✅ Saved", "success");
+        render("menu", {});
+      });
+    }
   });
 };
 window.delItem = function(id) {
-  if (!confirm("Delete item?")) return;
-  loadAll().then(function() {
-    var arr = ADD.filter(function(x) { return x.id !== id; });
-    var old = ADD;
-    ADD = arr;
-    syncTable("addons", arr, old, function(r) { return { id: r.id, name: r.name, price: r.price, points_price: r.points_price || 0, photo: r.photo || "" }; });
-    render("menu", {});
+  var a = ADD.find(function(x) { return x.id === id; });
+  if (!a) return;
+  confirmSheet({
+    title: "Delete " + a.name + "?",
+    yesText: "Delete",
+    danger: true,
+    onYes: function() {
+      loadAll().then(function() {
+        var arr = ADD.filter(function(x) { return x.id !== id; });
+        var old = ADD;
+        ADD = arr;
+        syncTable("addons", arr, old, function(r) { return { id: r.id, name: r.name, price: r.price, points_price: r.points_price || 0, photo: r.photo || "" }; });
+        toast("🗑 Deleted", "success");
+        render("menu", {});
+      });
+    }
   });
 };
 
@@ -559,22 +802,41 @@ R.tourneys = function() {
   return '<div class="screen"><div class="wrap"><a href="javascript:go(\'more\')" style="color:var(--muted);font-size:13px">← More</a><h1 style="margin-top:20px">Tournaments</h1><button class="btn" onclick="createTourney()">+ New</button><div style="margin-top:16px">' + cards + '</div></div></div>';
 };
 window.createTourney = function() {
-  var n = prompt("Tournament name?");
-  if (!n) return;
-  var g = prompt("Game?", "FIFA 24");
-  if (!g) return;
-  var d = prompt("Date? (YYYY-MM-DD)", new Date().toISOString().slice(0, 10));
-  if (!d) return;
-  var tm = prompt("Time? (HH:MM)", "18:00");
-  if (!tm) return;
-  var fee = parseInt(prompt("Entry fee ₹?", "500")) || 0;
-  loadAll().then(function() {
-    var t = { id: newTID(), name: n, game: g, date: d, time: tm, entryFee: fee, maxPlayers: 16, winnersCount: 3, banner: "🏆", bannerPic: "", description: "", prize1: "", prize2: "", prize3: "", prize4: "", rules: "", status: "open", players: [], bracket: [], winners: [], winner: null, createdAt: Date.now() };
-    var arr = [t].concat(TOURN);
-    var old = TOURN;
-    TOURN = arr;
-    syncTable("tournaments", arr, old, denormT);
-    render("tourneys", {});
+  var today = new Date().toISOString().slice(0, 10);
+  openSheet({
+    title: "🏆 New Tournament",
+    fields: [
+      { id: "name", label: "Tournament name", type: "text", placeholder: "e.g. FIFA Night" },
+      { id: "game", label: "Game", type: "text", value: "FIFA 24" },
+      { id: "date", label: "Date", type: "date", value: today },
+      { id: "time", label: "Time", type: "time", value: "18:00" },
+      { id: "fee", label: "Entry fee ₹", type: "number", value: "500" },
+      { id: "maxp", label: "Max players", type: "number", value: "16" }
+    ],
+    confirmText: "Create Tournament",
+    onConfirm: function(v) {
+      var n = (v.name || "").trim();
+      if (!n) return toast("Enter tournament name", "error");
+      var g = (v.game || "").trim();
+      if (!g) return toast("Enter game", "error");
+      loadAll().then(function() {
+        var t = {
+          id: newTID(), name: n, game: g,
+          date: v.date || today, time: v.time || "18:00",
+          entryFee: parseInt(v.fee) || 0,
+          maxPlayers: parseInt(v.maxp) || 16,
+          winnersCount: 3, banner: "🏆", bannerPic: "",
+          description: "", prize1: "", prize2: "", prize3: "", prize4: "", rules: "",
+          status: "open", players: [], bracket: [], winners: [], winner: null, createdAt: Date.now()
+        };
+        var arr = [t].concat(TOURN);
+        var old = TOURN;
+        TOURN = arr;
+        syncTable("tournaments", arr, old, denormT);
+        toast("✅ Tournament created", "success");
+        render("tourneys", {});
+      });
+    }
   });
 };
 R.tdetail = function(p) {
@@ -594,14 +856,23 @@ window.markPaidT = function(tid, pid) {
     if (!pl) return;
     pl.paid = true;
     upsertT(t);
+    toast("✅ Collected ₹" + t.entryFee, "success");
     render("tdetail", { id: tid });
   });
 };
 window.delTourney = function(tid) {
-  if (!confirm("Delete tournament?")) return;
-  loadAll().then(function() {
-    saveT(TOURN.filter(function(t) { return t.id !== tid; }));
-    go("tourneys");
+  confirmSheet({
+    title: "Delete Tournament?",
+    message: "This cannot be undone.",
+    yesText: "Delete",
+    danger: true,
+    onYes: function() {
+      loadAll().then(function() {
+        saveT(TOURN.filter(function(t) { return t.id !== tid; }));
+        toast("🗑 Deleted", "success");
+        go("tourneys");
+      });
+    }
   });
 };
 
@@ -616,7 +887,7 @@ R.reports = function() {
 };
 
 /* ============================================================
-   SETTINGS PAGE — staff can edit café info, prices, loyalty
+   SETTINGS PAGE
    ============================================================ */
 R.settings = function() {
   if (!can("settings")) return R.denied();
@@ -638,22 +909,19 @@ R.settings = function() {
       '<div style="font-weight:800;color:var(--gold);margin-bottom:10px;font-size:15px">' + esc(e.name) + '</div>' +
       '<label>Name</label><input type="text" data-exp="' + i + '" data-field="name" value="' + esc(e.name) + '">' +
       '<label>Subtitle</label><input type="text" data-exp="' + i + '" data-field="sub" value="' + esc(e.sub || "") + '">' +
-      priceFields +
-      '</div>';
+      priceFields + '</div>';
   }).join("");
 
   return '<div class="screen"><div class="wrap" style="max-width:560px">' +
     '<a href="javascript:go(\'more\')" style="color:var(--muted);font-size:13px">← More</a>' +
     '<h1 style="margin-top:20px">Settings</h1>' +
     '<p class="sub">Changes apply instantly to customer app</p>' +
-
     '<div class="sec-label">📍 Café Info</div>' +
     '<div class="card">' +
       '<label>Phone</label><input id="set_phone" value="' + esc(s.phone || "") + '">' +
       '<label>Hours</label><input id="set_hours" value="' + esc(s.hours || "") + '">' +
       '<label>Address</label><input id="set_address" value="' + esc(s.address || "") + '">' +
     '</div>' +
-
     '<div class="sec-label">💰 Loyalty Settings</div>' +
     '<div class="card">' +
       '<div class="grid2">' +
@@ -665,10 +933,8 @@ R.settings = function() {
         '<div><label>Birthday bonus</label><input id="set_bday" type="number" value="' + (l.BDAY_BONUS || 100) + '"></div>' +
       '</div>' +
     '</div>' +
-
     '<div class="sec-label">🎮 Experiences & Prices</div>' +
     '<div id="exp_editor">' + expHTML + '</div>' +
-
     '<button class="btn" style="margin-top:20px" onclick="saveAllSettings()">💾 Save All Changes</button>' +
     '<div class="notice green" style="margin-top:14px">✅ Changes apply instantly — customers will see them on their next screen refresh.</div>' +
   '</div></div>';
@@ -689,7 +955,6 @@ window.saveAllSettings = function() {
     },
     experiences: []
   };
-
   var exps = (SETTINGS && SETTINGS.experiences) || EXP;
   exps.forEach(function(e, i) {
     var ne = JSON.parse(JSON.stringify(e));
@@ -697,7 +962,6 @@ window.saveAllSettings = function() {
     var subEl = document.querySelector('[data-exp="' + i + '"][data-field="sub"]');
     if (nameEl) ne.name = nameEl.value.trim();
     if (subEl) ne.sub = subEl.value.trim();
-
     if (ne.fixed) {
       var fxEl = document.querySelector('[data-exp="' + i + '"][data-field="fixed"]');
       if (fxEl) ne.fixed = parseInt(fxEl.value) || 0;
@@ -712,10 +976,9 @@ window.saveAllSettings = function() {
     }
     s.experiences.push(ne);
   });
-
   saveSettings(s).then(function(res) {
-    if (res && res.error) { alert("❌ " + res.error.message); return; }
-    alert("✅ Settings saved!\n\nCustomers will see changes immediately.");
+    if (res && res.error) { toast("❌ " + res.error.message, "error"); return; }
+    toast("✅ Settings saved!", "success");
     render("settings", {});
   });
 };
@@ -743,22 +1006,31 @@ window.chP = function(d) { var n = bk.players + d; if (n < 1 || n > 8) return; b
 window.saveSale = function() {
   var e = EXP.find(function(x) { return x.id === bk.exp; });
   if (!e) return;
-  var n = prompt("Customer name?", "Walk-in");
-  if (!n) return;
-  var isMem = e.id === "member" || e.id === "racemem";
-  var items = [e.name];
-  if (bk.time && !e.fixed && !isMem) items.push(bk.time + "min × " + bk.players + "p");
-  var total = e.fixed || 0;
-  if (!e.fixed && bk.time) total = (e.prices[bk.time] || 0) * bk.players;
-  var s = { id: newBID(), name: n, phone: "", expId: e.id, expName: e.name, items: items, total: total, minutes: isMem ? 1800 : (bk.time || 60), players: bk.players, method: "cash", paid: false, status: "pending", createdAt: Date.now(), customerId: null, isMembership: isMem };
-  loadAll().then(function() {
-    var arr = [s].concat(SESS);
-    var old = SESS;
-    SESS = arr;
-    syncTable("sessions", arr, old, denormS);
-    bk = null;
-    alert("✅ Saved ₹" + total);
-    go("payments");
+  openSheet({
+    title: "💾 New Sale",
+    subtitle: e.name + (bk.time ? " · " + bk.time + "min" : ""),
+    fields: [
+      { id: "cname", label: "Customer name", type: "text", value: "Walk-in", placeholder: "e.g. Arjun" }
+    ],
+    confirmText: "Save Sale",
+    onConfirm: function(v) {
+      var n = (v.cname || "").trim() || "Walk-in";
+      var isMem = e.id === "member" || e.id === "racemem";
+      var items = [e.name];
+      if (bk.time && !e.fixed && !isMem) items.push(bk.time + "min × " + bk.players + "p");
+      var total = e.fixed || 0;
+      if (!e.fixed && bk.time) total = (e.prices[bk.time] || 0) * bk.players;
+      var s = { id: newBID(), name: n, phone: "", expId: e.id, expName: e.name, items: items, total: total, minutes: isMem ? 1800 : (bk.time || 60), players: bk.players, method: "cash", paid: false, status: "pending", createdAt: Date.now(), customerId: null, isMembership: isMem };
+      loadAll().then(function() {
+        var arr = [s].concat(SESS);
+        var old = SESS;
+        SESS = arr;
+        syncTable("sessions", arr, old, denormS);
+        bk = null;
+        toast("✅ Saved ₹" + total, "success");
+        go("payments");
+      });
+    }
   });
 };
 
