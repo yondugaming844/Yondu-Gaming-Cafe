@@ -5,7 +5,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 a{color:var(--cyan);cursor:pointer;text-decoration:none}
 .screen{padding:20px 16px}
 .wrap{max-width:680px;margin:0 auto}
-.wrap-lg{max-width:900px;margin:0 auto}
 .brand{display:flex;gap:12px;align-items:center;margin-bottom:20px}
 .brand-icon{width:44px;height:44px;border-radius:50%;background:var(--card) url('logo.png') center/cover;border:2px solid var(--gold);flex-shrink:0}
 .brand-txt .g{color:var(--gold-dark);font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
@@ -13,7 +12,6 @@ a{color:var(--cyan);cursor:pointer;text-decoration:none}
 .brand-txt .s{color:var(--muted);font-size:11px;font-weight:500;margin-top:2px}
 h1{font-size:24px;font-weight:800;margin-bottom:6px;color:var(--txt)}
 h2{font-size:17px;font-weight:700;margin-bottom:6px;color:var(--txt)}
-h3{font-size:14px;font-weight:700;margin-bottom:6px;color:var(--txt)}
 .sub{color:var(--muted);font-size:13px;margin-bottom:16px}
 .sec-label{font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;margin-bottom:10px;margin-top:20px}
 .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px}
@@ -95,9 +93,9 @@ label{display:block;font-size:11px;color:var(--muted);font-weight:700;letter-spa
 .timer-huge.warn{color:#f59e0b}
 .timer-huge.over{color:var(--red)}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:flex-end;z-index:300}
-.modal.center{align-items:center;padding:16px}
 .sheet{background:var(--card);border-top:1px solid var(--border);border-radius:16px 16px 0 0;width:100%;max-width:560px;margin:0 auto;padding:24px 20px 32px;max-height:92vh;overflow-y:auto}
-.modal.center .sheet{border-radius:14px;border:1px solid var(--border)}
+.sheet h2{font-size:20px;font-weight:800;margin-bottom:6px;color:var(--txt)}
+.sheet .s{color:var(--muted);font-size:13px;margin-bottom:16px}
 .badge-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
 .badge-item{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 6px;text-align:center}
 .badge-item.unlocked{border-color:var(--gold);background:#1f1a10}
@@ -110,15 +108,6 @@ label{display:block;font-size:11px;color:var(--muted);font-weight:700;letter-spa
 .benefit .ic{font-size:22px;flex-shrink:0;width:28px;text-align:center}
 .benefit .t{font-weight:700;font-size:14px;color:var(--txt)}
 .benefit .d{color:var(--muted);font-size:12px;margin-top:2px;line-height:1.5}
-
-/* ---- ADMIN PANEL SPECIFIC ---- */
-.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px;border-bottom:1px solid var(--border)}
-.tabs::-webkit-scrollbar{display:none}
-.tab{padding:10px 14px;background:transparent;border:0;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;border-bottom:2px solid transparent}
-.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
-.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center}
-.stat .v{font-size:26px;font-weight:800;color:var(--gold-bright);line-height:1}
-.stat .l{color:var(--muted);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-top:6px}
 .station{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px;cursor:pointer}
 .station.playing{border-color:var(--cyan);background:linear-gradient(135deg,#0b1a1f,#0a1418)}
 .station.free{border-style:dashed}
@@ -131,6 +120,9 @@ label{display:block;font-size:11px;color:var(--muted);font-weight:700;letter-spa
 .station .time{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--cyan)}
 .station .time.warn{color:#f59e0b}
 .station .time.over{color:var(--red)}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center}
+.stat .v{font-size:22px;font-weight:800;color:var(--gold-bright);line-height:1}
+.stat .l{color:var(--muted);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-top:6px}
 .row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);gap:10px}
 .row:last-child{border-bottom:0}
 .row-info{flex:1;min-width:0}
