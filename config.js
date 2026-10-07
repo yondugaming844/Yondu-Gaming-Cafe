@@ -33,7 +33,8 @@ var ADD_DEF = [
   { id: "sand", name: "Sandwich", price: 60, points_price: 60, photo: "" },
   { id: "fries", name: "French Fries", price: 80, points_price: 80, photo: "" }
 ];
-var CAFE_INFO = { hours: "Mon-Sun · 10:00 AM - 11:00 PM", address: "Vadodara, Gujarat", phone: CAFE_PHONE };
+
+var CAFE_INFO = { hours: "Mon-Sun · 10:00 AM - 12:00 AM", address: "Vadodara, Gujarat", phone: CAFE_PHONE };
 
 var CUST = [], SESS = [], TOURN = [], REQ = [], STA = [], EXP = [], ADD = [], ADMINS = [];
 var SETTINGS = null;
@@ -71,8 +72,9 @@ function readImageFile(file, cb) {
 function fmtTime(t) { if (!t) return "--"; var p = String(t).split(":"); var hh = parseInt(p[0], 10); var ap = hh >= 12 ? "PM" : "AM"; var h12 = hh % 12 || 12; return h12 + ":" + p[1] + " " + ap; }
 function money(n) { return "₹" + (Number(n) || 0).toLocaleString("en-IN"); }
 function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function(c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
-function getGR() { return localStorage.getItem("yondu_google_review") || "https://g.page"; }
-function getIG() { return localStorage.getItem("yondu_instagram") || "https://instagram.com/yondugamingcafe"; }
+
+function getGR() { return "https://share.google/hjj8msQlg8N1tEBHa"; }
+function getIG() { return "https://www.instagram.com/yondu_gamingcafe"; }
 
 var DB = {
   get: function(k, d) { try { var s = localStorage.getItem(k); return s ? JSON.parse(s) : d; } catch(e) { return d; } },
@@ -82,17 +84,13 @@ var DB = {
 
 function normC(r) { return { id: r.id, name: r.name, phone: r.phone || "", birthday: r.birthday || "", pinHash: r.pin_hash, points: r.points || 0, pointsSpent: r.points_spent || 0, ps5Hours: r.ps5_hours || 0, raceHours: r.race_hours || 0, totalSpent: Number(r.total_spent) || 0, visits: r.visits || 0, activated: !!r.activated, vip: !!r.vip, banned: !!r.banned, profilePic: r.profile_pic || "", credit: r.credit || 0, creditUsed: !!r.credit_used, referrals: r.referrals || 0, referredBy: r.referred_by || null, birthdayAwarded: r.birthday_awarded || 0, lastActivity: r.last_activity || 0, pointsExpiredAt: r.points_expired_at || 0, createdAt: r.created_at || Date.now() }; }
 function denormC(c) { return { id: c.id, name: c.name, phone: c.phone || null, birthday: c.birthday || null, pin_hash: c.pinHash, points: c.points || 0, points_spent: c.pointsSpent || 0, ps5_hours: c.ps5Hours || 0, race_hours: c.raceHours || 0, total_spent: c.totalSpent || 0, visits: c.visits || 0, activated: !!c.activated, vip: !!c.vip, banned: !!c.banned, profile_pic: c.profilePic || null, credit: c.credit || 0, credit_used: !!c.creditUsed, referrals: c.referrals || 0, referred_by: c.referredBy || null, birthday_awarded: c.birthdayAwarded || 0, last_activity: c.lastActivity || 0, points_expired_at: c.pointsExpiredAt || 0, created_at: c.createdAt || Date.now() }; }
-
 function normS(r) { var items = []; try { items = JSON.parse(r.items || "[]"); } catch(e) {} return { id: r.id, name: r.name, phone: r.phone || "", expId: r.exp_id, expName: r.exp_name, items: items, total: Number(r.total) || 0, minutes: r.minutes || 0, players: r.players || 1, method: r.method || "cash", paid: !!r.paid, status: r.status || "pending", stationId: r.station_id || null, start: r.start_time || null, end: r.end_time || null, customerId: r.customer_id || null, pointsEarned: r.points_earned || 0, isMembership: !!r.is_membership, createdAt: r.created_at || Date.now() }; }
 function denormS(s) { return { id: s.id, name: s.name, phone: s.phone || null, exp_id: s.expId || null, exp_name: s.expName || null, items: JSON.stringify(s.items || []), total: s.total || 0, minutes: s.minutes || 0, players: s.players || 0, method: s.method || "cash", paid: !!s.paid, status: s.status || "pending", station_id: s.stationId || null, start_time: s.start || null, end_time: s.end || null, customer_id: s.customerId || null, points_earned: s.pointsEarned || 0, is_membership: !!s.isMembership, created_at: s.createdAt || Date.now() }; }
-
 function normT(r) { var p = [], b = [], w = []; try { p = JSON.parse(r.players || "[]"); } catch(e) {} try { b = JSON.parse(r.bracket || "[]"); } catch(e) {} try { w = JSON.parse(r.winners || "[]"); } catch(e) {} return { id: r.id, name: r.name, game: r.game, date: r.date || "", time: (r.time || "").slice(0, 5), entryFee: r.entry_fee || 0, maxPlayers: r.max_players || 16, winnersCount: r.winners_count || 3, banner: r.banner || "🏆", bannerPic: r.banner_pic || "", description: r.description || "", prize1: r.prize1 || "", prize2: r.prize2 || "", prize3: r.prize3 || "", prize4: r.prize4 || "", rules: r.rules || "", status: r.status || "open", players: p, bracket: b, winners: w, winner: r.winner || null, createdAt: r.created_at || Date.now() }; }
 function denormT(t) { return { id: t.id, name: t.name, game: t.game, date: t.date || null, time: t.time || null, entry_fee: t.entryFee || 0, max_players: t.maxPlayers || 16, winners_count: t.winnersCount || 3, banner: t.banner || "🏆", banner_pic: t.bannerPic || null, description: t.description || null, prize1: t.prize1 || null, prize2: t.prize2 || null, prize3: t.prize3 || null, prize4: t.prize4 || null, rules: t.rules || null, status: t.status || "open", players: JSON.stringify(t.players || []), bracket: JSON.stringify(t.bracket || []), winners: JSON.stringify(t.winners || []), winner: t.winner || null, created_at: t.createdAt || Date.now() }; }
-
 function normE(r) { var prices = {}, durs = null; try { prices = JSON.parse(r.prices || "{}"); } catch(e) {} try { if (r.durs) durs = JSON.parse(r.durs); } catch(e) {} return { id: r.id, name: r.name, color: r.color, from: r.from_price, fixed: r.fixed_price, prices: prices, durs: durs, sub: r.sub }; }
 function normReq(r) { var items = []; try { items = JSON.parse(r.items || "[]"); } catch(e) {} return { id: r.id, type: r.type, customerId: r.customer_id, sessionId: r.session_id, customerName: r.customer_name, items: items, total: r.total || 0, pointsUsed: r.points_used || 0, minutes: r.minutes || 0, status: r.status || "pending", note: r.note || "", createdAt: r.created_at || 0, processedAt: r.processed_at || 0 }; }
 function denormReq(r) { return { id: r.id, type: r.type, customer_id: r.customerId, session_id: r.sessionId || null, customer_name: r.customerName, items: JSON.stringify(r.items || []), total: r.total || 0, points_used: r.pointsUsed || 0, minutes: r.minutes || 0, status: r.status || "pending", note: r.note || null, created_at: r.createdAt || Date.now(), processed_at: r.processedAt || null }; }
-
 function normA(r) { var p = []; try { p = JSON.parse(r.perms || "[]"); } catch(e) {} return { username: r.username, passHash: r.pass_hash, role: r.role || "admin", perms: p, createdAt: r.created_at || 0, password_changed_at: r.password_changed_at || 0, password_history: r.password_history || "[]" }; }
 function denormA(a) { return { username: a.username, pass_hash: a.passHash, role: a.role || "admin", perms: JSON.stringify(a.perms || []), created_at: a.createdAt || Date.now(), password_changed_at: a.password_changed_at || 0, password_history: a.password_history || "[]" }; }
 
