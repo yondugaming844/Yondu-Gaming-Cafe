@@ -1,7 +1,7 @@
 /* YONDU CONFIG */
 
-var SB_URL = "https://murcilacjeoemdgrfwpl.supabase.co";
-var SB_KEY = "sb_publishable_7exYurU_LMovVH8jHysPmg_YaY76aci";
+var SB_URL = "https://scennuyvxitoblpuixxl.supabase.co";
+var SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjZW5udXl2eGl0b2JscHVpeHhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNjAxNzcsImV4cCI6MjEwNjkzNjE3N30.EeOSVjWoL1iv8i0SclNGgLySZdlXgpo6_WOoZH4aGC0";
 var sb = null;
 try { sb = window.supabase.createClient(SB_URL, SB_KEY); } catch(e) { console.error(e); }
 
@@ -148,7 +148,8 @@ function upsertT(t) { var a = TOURN.slice(); var i = a.findIndex(function(x) { r
 function upsertReq(r) { var a = REQ.slice(); var i = a.findIndex(function(x) { return x.id === r.id; }); if (i >= 0) a[i] = r; else a.unshift(r); REQ = a; syncTable("requests", a, [], denormReq); }
 function saveAdmins(arr) {
   if (!sb) return Promise.resolve();
-  return sb.from("admins").delete().neq("username", "__never__").then(function() { if (arr.length) return sb.from("admins").insert(arr.map(denormA)); }).catch(function(e) { console.error(e); });
+  if (!arr.length) { return sb.from("admins").delete().neq("username", "__never__").catch(function(e) { console.error(e); }); }
+  return Promise.all(arr.map(function(a) { return sb.from("admins").upsert(denormA(a)); })).catch(function(e) { console.error(e); });
 }
 
 function newCID() { for (var i = 0; i < 200; i++) { var id = String(Math.floor(100000 + Math.random() * 900000)); if (!CUST.find(function(c) { return c.id === id; })) return id; } return String(Date.now()).slice(-6); }
