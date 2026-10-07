@@ -1,9 +1,7 @@
 /* YONDU CUSTOMER APP */
 
-var curR = "";
-var bk = null;
-var sc = {};
-var signupPic = "";
+var curR = "", bk = null, sc = {}, signupPic = "";
+var PUBLIC_ROUTES = { landing: 1, signin: 1, signup: 1, login: 1 };
 
 function curC() {
   var id = DB.get("yondu_current_customer", null);
@@ -15,7 +13,6 @@ function signOut() { DB.del("yondu_current_customer"); DB.del("yondu_guest_mode"
 function isGuest() { return !curC() && DB.get("yondu_guest_mode", false); }
 function setGuest() { DB.set("yondu_guest_mode", true); }
 
-var PUBLIC_ROUTES = { landing: 1, signin: 1, signup: 1, login: 1 };
 var R = {};
 function go(r, p) { curR = r; window.scrollTo(0, 0); render(r, p || {}); }
 window.go = go;
@@ -27,7 +24,7 @@ window.tapAdmin = function() {
   adminTapTimer = setTimeout(function() { adminTaps = 0; }, 1500);
   if (adminTaps >= 5) {
     adminTaps = 0;
-    if (confirm("🔐 Staff login?\n\nThis opens the admin panel.")) window.location.href = "admin.html";
+    if (confirm("Staff login?")) window.location.href = "admin.html";
   }
 };
 
@@ -42,10 +39,13 @@ function render(r, p) {
   renderNav(r);
   if (R[r] && R[r].after) R[r].after(p);
 }
+
 function renderNav(r) {
   var nav = document.getElementById("nav");
   var c = curC();
-  if (r === "landing" || r === "signin" || r === "login" || r === "signup" || r === "pending") { nav.style.display = "none"; return; }
+  if (r === "landing" || r === "signin" || r === "login" || r === "signup" || r === "pending") {
+    nav.style.display = "none"; return;
+  }
   if (!c || !c.activated) { nav.style.display = "none"; return; }
   nav.style.display = "flex";
   nav.innerHTML =
@@ -56,44 +56,68 @@ function renderNav(r) {
     '<a href="javascript:go(\'profile\')" class="' + (r === "profile" ? "on" : "") + '"><span class="ic">🎁</span>Me</a>';
 }
 
+/* ===================== LANDING (NEW PREMIUM) ===================== */
 R.landing = function() {
-  return '<div class="screen" style="padding-top:40px"><div class="wrap" style="max-width:440px">' +
-    '<div style="text-align:center;margin-bottom:30px">' +
-      '<div class="brand-icon" style="margin:0 auto 20px;width:110px;height:110px;border-width:3px"></div>' +
-      '<h1 style="font-size:32px;color:var(--gold);letter-spacing:4px;font-weight:800">YONDU</h1>' +
-      '<p style="color:var(--muted);font-size:12px;letter-spacing:4px;margin-top:6px">GAMING CAFÉ</p>' +
-      '<p style="color:var(--muted);font-size:13px;margin-top:14px;font-style:italic">Where Legends Play</p></div>' +
-    '<button class="btn" onclick="go(\'signin\')">Sign In</button>' +
-    '<button class="btn dark" style="margin-top:10px" onclick="go(\'signup\')">Create Account</button>' +
-    '<button class="btn outline" style="margin-top:10px" onclick="guestEnter()">👀 Browse as Guest</button>' +
-    '<div class="notice gold" style="margin-top:24px;text-align:center;font-size:12px">🎁 New here? Get <b>30 minutes FREE</b> + <b>50 bonus points</b></div>' +
-    '<div class="sec-label" style="text-align:center;margin-top:28px">Why Join?</div>' +
-    '<div class="card" style="padding:6px 16px">' +
-      '<div class="benefit"><div class="ic">💰</div><div><div class="t">Earn Points</div><div class="d">₹20 spent = 1 reward point</div></div></div>' +
-      '<div class="benefit"><div class="ic">🎁</div><div><div class="t">Free Hours</div><div class="d">1000 points = 1 hour free play</div></div></div>' +
-      '<div class="benefit"><div class="ic">🍟</div><div><div class="t">Points for Snacks</div><div class="d">Buy drinks & snacks with points</div></div></div>' +
-      '<div class="benefit"><div class="ic">🤝</div><div><div class="t">Refer Friends</div><div class="d">Both get 50 points</div></div></div>' +
-      '<div class="benefit"><div class="ic">🎂</div><div><div class="t">Birthday Bonus</div><div class="d">100 points + 30 min free</div></div></div>' +
+  var stats = {
+    customers: CUST.length || 0,
+    stations: STA.length || 5,
+    tournaments: TOURN.filter(function(t) { return t.status !== "done"; }).length
+  };
+  return '<div class="landing">' +
+    '<div class="hero-bg-text">YONDU</div>' +
+    '<div class="hero">' +
+      '<div class="hero-badge">✦ Est. 2024 · Vadodara ✦</div>' +
+      '<h1 class="hero-title">YONDU</h1>' +
+      '<p class="hero-sub">Gaming Café</p>' +
+      '<p class="hero-tag">Where legends power up and squad goals begin.</p>' +
+      '<div class="hero-actions">' +
+        '<button class="btn" onclick="go(\'signup\')">🎮 Start Playing</button>' +
+        '<button class="btn dark" onclick="go(\'signin\')">Sign In</button>' +
+      '</div>' +
+      '<button class="btn-link" onclick="guestEnter()">Browse as guest →</button>' +
     '</div>' +
-    '<div style="text-align:center;color:var(--muted);font-size:11px;margin-top:24px;line-height:1.8">' + CAFE_INFO.hours + '<br>' + CAFE_INFO.address + '</div>' +
-    '<div style="text-align:center;margin-top:24px"><a href="admin.html" style="color:var(--muted);font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;opacity:.55">Staff Login →</a></div>' +
-  '</div></div>';
+    '<div class="stat-strip">' +
+      '<div class="stat-item"><div class="stat-num">' + stats.customers + '</div><div class="stat-lbl">Players</div></div>' +
+      '<div class="stat-item"><div class="stat-num">' + stats.stations + '</div><div class="stat-lbl">Stations</div></div>' +
+      '<div class="stat-item"><div class="stat-num">' + stats.tournaments + '</div><div class="stat-lbl">Events</div></div>' +
+    '</div>' +
+    '<div class="features">' +
+      '<div class="sec-label" style="text-align:center;margin-top:0">What You Get</div>' +
+      '<div class="feature-grid">' +
+        '<div class="feature-card" onclick="go(\'signup\')"><span class="feature-ic">🎮</span><div class="feature-t">PS5 + Racing</div><div class="feature-d">Latest AAA titles + full racing rig</div></div>' +
+        '<div class="feature-card" onclick="go(\'signup\')"><span class="feature-ic">🍟</span><div class="feature-t">Snacks & Drinks</div><div class="feature-d">Fuel up between matches</div></div>' +
+        '<div class="feature-card" onclick="go(\'signup\')"><span class="feature-ic">🏆</span><div class="feature-t">Tournaments</div><div class="feature-d">Weekly events with prizes</div></div>' +
+        '<div class="feature-card" onclick="go(\'signup\')"><span class="feature-ic">🎁</span><div class="feature-t">Rewards</div><div class="feature-d">Every ₹20 = 1 point</div></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="cta-band">' +
+      '<div class="cta-inner">' +
+        '<div class="cta-title">New here?</div>' +
+        '<div class="cta-sub">Get 30 minutes FREE + 50 bonus points</div>' +
+        '<button class="btn" onclick="go(\'signup\')">Claim Now →</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="footer-links">' + CAFE_INFO.hours + '<br>' + CAFE_INFO.address + '</div>' +
+    '<a href="admin.html" class="staff-link">Staff Login →</a>' +
+  '</div>';
 };
+
 window.guestEnter = function() { setGuest(); go("guest_home"); };
 
+/* ===================== GUEST ===================== */
 R.guest_home = function() {
   var open = TOURN.filter(function(t) { return t.status !== "done"; }).slice(0, 3);
   var expCards = EXP.map(function(e) {
-    return '<div class="card" style="padding:14px"><div style="font-size:15px;font-weight:700;color:var(--txt)">' + e.name + '</div><div style="color:var(--muted);font-size:12px;margin-top:4px">' + (e.sub || "Popular") + '</div></div>';
+    return '<div class="card"><div style="font-size:15px;font-weight:700">' + e.name + '</div><div style="color:var(--muted);font-size:12px;margin-top:4px">' + (e.sub || "Popular") + '</div></div>';
   }).join("");
   var addRows = ADD.slice(0, 6).map(function(a) {
-    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px"><span style="color:var(--txt)">' + a.name + '</span><span style="color:var(--muted);font-size:12px">Sign up to order</span></div>';
+    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px"><span>' + a.name + '</span><span style="color:var(--muted);font-size:12px">₹' + a.price + '</span></div>';
   }).join("");
   return '<div class="screen"><div class="wrap">' +
     '<div class="brand"><div class="brand-icon"></div><div class="brand-txt"><div class="g">Jay Shree Ganesha</div><div class="n">Yondu Gaming Café</div><div class="s">GUEST MODE</div></div></div>' +
     '<div class="card" style="background:linear-gradient(135deg,#1a1508,#0d0b05);border:2px solid var(--gold);padding:18px">' +
       '<div style="color:var(--gold);font-size:10px;font-weight:700;letter-spacing:1.5px">BROWSING AS</div>' +
-      '<div style="font-size:20px;font-weight:800;color:var(--txt);margin-top:4px">Guest 👀</div>' +
+      '<div style="font-size:20px;font-weight:800;margin-top:4px">Guest 👀</div>' +
       '<div style="color:var(--muted);font-size:12px;margin-top:6px">Sign up to book, order, compete, and earn rewards</div>' +
       '<button class="btn" style="margin-top:14px" onclick="go(\'signup\')">🎁 Sign Up · 30 min FREE</button></div>' +
     '<div class="sec-label">📍 Visit Us</div>' +
@@ -110,6 +134,7 @@ R.guest_home = function() {
   '</div></div>';
 };
 
+/* ===================== SIGNIN ===================== */
 R.signin = function() {
   return '<div class="screen"><div class="wrap" style="max-width:440px;margin:30px auto">' +
     '<a href="javascript:go(\'landing\')" style="color:var(--muted);font-weight:600;font-size:13px">← Back</a>' +
@@ -149,6 +174,7 @@ window.doSignin = function() {
   go("home");
 };
 
+/* ===================== SIGNUP ===================== */
 R.signup = function() {
   var av = signupPic
     ? '<div class="avatar avatar-lg" style="background-image:url(\'' + signupPic + '\');margin:0 auto"></div>'
@@ -159,17 +185,29 @@ R.signup = function() {
   return '<div class="screen"><div class="wrap" style="max-width:440px;margin:30px auto">' +
     '<a href="javascript:go(\'landing\')" style="color:var(--muted);font-weight:600;font-size:13px">← Back</a>' +
     '<h1 style="margin-top:20px">Create Account</h1><p class="sub">One account per person</p>' +
+    '<div class="preview-card">' +
+      '<div class="tag">✨ WHAT YOU GET</div>' +
+      '<div style="font-size:28px;margin:6px 0 8px">🎮</div>' +
+      '<div style="font-weight:800;color:var(--gold-bright);font-size:15px;margin-bottom:14px">Welcome to Yondu</div>' +
+      '<div style="text-align:left">' +
+        '<div class="benefit" style="padding:8px 0"><div class="ic" style="font-size:16px">🆔</div><div><div class="t" style="font-size:13px">Unique Yondu Number</div><div class="d">Use it every visit</div></div></div>' +
+        '<div class="benefit" style="padding:8px 0"><div class="ic" style="font-size:16px">🎁</div><div><div class="t" style="font-size:13px">' + REF_BONUS + ' Bonus Points</div><div class="d">Yours on activation</div></div></div>' +
+        '<div class="benefit" style="padding:8px 0"><div class="ic" style="font-size:16px">⏱</div><div><div class="t" style="font-size:13px">30 Minutes FREE</div><div class="d">Credited on activation</div></div></div>' +
+        '<div class="benefit" style="padding:8px 0"><div class="ic" style="font-size:16px">💰</div><div><div class="t" style="font-size:13px">1 Point per ₹' + RR + '</div><div class="d">' + POINTS_PER_HOUR + ' points = 1 free hour</div></div></div>' +
+      '</div>' +
+    '</div>' +
     '<div style="text-align:center;margin:6px 0 18px">' +
       '<div onclick="pickSignupPic()" style="display:inline-block;cursor:pointer">' + av + '</div>' +
       '<div style="color:var(--muted);font-size:12px;margin-top:8px">' + hint + '</div>' +
-      '<input type="file" id="signupPicInput" accept="image/*" style="display:none" onchange="handleSignupPic(this)"></div>' +
+      '<input type="file" id="signupPicInput" accept="image/*" style="display:none" onchange="handleSignupPic(this)">' +
+    '</div>' +
     '<label>Your Name</label><input id="sn" placeholder="e.g. Arjun" maxlength="30">' +
-    '<div style="font-size:11px;color:var(--muted);margin:-6px 0 10px;line-height:1.5">At least 3 letters · must be unique</div>' +
-    '<label>Birthday</label><input id="sb" type="date">' +
+    '<div style="font-size:11px;color:var(--muted);margin:-6px 0 10px">At least 3 letters · must be unique</div>' +
+    '<label>Birthday <span class="opt">(optional)</span></label><input id="sb" type="date">' +
     '<label>Referral Code <span class="opt">(optional)</span></label><input id="sr" placeholder="6-digit" style="text-transform:uppercase" maxlength="6">' +
     '<label>PIN (4-digit)</label><input id="sp1" placeholder="••••" inputmode="numeric" maxlength="4" type="password">' +
     '<label>Confirm PIN</label><input id="sp2" placeholder="••••" inputmode="numeric" maxlength="4" type="password">' +
-    '<button class="btn" style="margin-top:12px" onclick="doSignup()">Create Account</button>' +
+    '<button class="btn" style="margin-top:12px" onclick="doSignup()">Create My Account 🎮</button>' +
   '</div></div>';
 };
 
@@ -225,6 +263,7 @@ window.doSignup = function() {
   go("pending");
 };
 
+/* ===================== PENDING ===================== */
 R.pending = function() {
   var c = curC();
   if (!c) return R.landing();
@@ -237,8 +276,8 @@ R.pending = function() {
       '<h1 style="font-size:22px;text-align:center;margin-top:14px">Hi, ' + c.name + '!</h1>' +
       '<p style="color:var(--muted);font-size:14px;margin-top:6px">Waiting for activation</p></div>' +
     '<div class="id-card"><div class="label">YOUR YONDU NUMBER</div><div class="idnum">' + c.id + '</div><div class="hint">Show at counter</div></div>' +
-    '<div class="notice red" style="margin-top:14px;font-size:14px"><b>📢 Next step:</b><br>Show this number to staff at counter.</div>' +
-    '<div class="notice green" style="margin-top:10px"><b>🎁 Waiting:</b><br>• 30 minutes of FREE play<br>• 50 bonus points</div>' +
+    '<div class="notice red" style="margin-top:14px"><b>📢 Next step:</b><br>Show this number to staff at counter.</div>' +
+    '<div class="notice green" style="margin-top:10px"><b>🎁 Waiting:</b><br>• 30 minutes FREE<br>• 50 bonus points</div>' +
     '<button class="btn" style="margin-top:14px" onclick="checkActivation()">🔄 Check Activation</button>' +
     '<button class="btn dark" style="margin-top:8px" onclick="signOut()">Sign Out</button>' +
   '</div></div>';
@@ -254,6 +293,7 @@ window.checkActivation = function() {
   }).catch(function() { alert("Could not load. Try again."); });
 };
 
+/* ===================== HOME ===================== */
 R.home = function() {
   var c = curC();
   if (!c) return R.landing();
@@ -265,8 +305,8 @@ R.home = function() {
     : '<div class="avatar">' + c.name.charAt(0).toUpperCase() + '</div>';
   var mem = "";
   if (c.ps5Hours > 0 || c.raceHours > 0) {
-    var ps = c.ps5Hours > 0 ? '<div><div style="color:var(--muted);font-size:10px;font-weight:700">PS5</div><div style="font-size:20px;font-weight:800;color:var(--txt)">' + c.ps5Hours + 'h</div></div>' : "";
-    var rc = c.raceHours > 0 ? '<div><div style="color:var(--muted);font-size:10px;font-weight:700">RACING</div><div style="font-size:20px;font-weight:800;color:var(--txt)">' + c.raceHours + 'h</div></div>' : "";
+    var ps = c.ps5Hours > 0 ? '<div><div style="color:var(--muted);font-size:10px;font-weight:700">PS5</div><div style="font-size:20px;font-weight:800">' + c.ps5Hours + 'h</div></div>' : "";
+    var rc = c.raceHours > 0 ? '<div><div style="color:var(--muted);font-size:10px;font-weight:700">RACING</div><div style="font-size:20px;font-weight:800">' + c.raceHours + 'h</div></div>' : "";
     mem = '<div class="card" style="background:linear-gradient(135deg,#0d1a10,#0a1409);border:1px solid var(--green);padding:14px"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="color:var(--green);font-size:10px;font-weight:700;letter-spacing:1.5px">🎫 MEMBERSHIP</div><div style="display:flex;gap:18px;margin-top:8px">' + ps + rc + '</div></div><div style="font-size:32px">🎫</div></div></div>';
   }
   return '<div class="screen"><div class="wrap">' +
@@ -275,11 +315,11 @@ R.home = function() {
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px">' +
         '<div style="display:flex;align-items:center;gap:12px;min-width:0">' + av +
           '<div style="min-width:0"><div style="color:var(--gold);font-size:9px;font-weight:700;letter-spacing:1.5px">WELCOME BACK</div>' +
-            '<div style="font-size:17px;font-weight:800;color:var(--txt);margin-top:2px">' + c.name + (c.vip ? " ⭐" : "") + '</div>' +
+            '<div style="font-size:17px;font-weight:800;margin-top:2px">' + c.name + (c.vip ? " ⭐" : "") + '</div>' +
             '<div style="color:var(--cyan);font-size:12px;font-weight:700;letter-spacing:1.5px;margin-top:2px">' + c.id + '</div></div></div>' +
-        '<div style="text-align:right;flex-shrink:0"><div style="color:var(--gold);font-size:9px;font-weight:700">POINTS</div><div style="font-size:26px;font-weight:800;color:var(--gold-bright);line-height:1">' + pts + '</div></div>' +
+        '<div style="text-align:right"><div style="color:var(--gold);font-size:9px;font-weight:700">POINTS</div><div style="font-size:26px;font-weight:800;color:var(--gold-bright);line-height:1">' + pts + '</div></div>' +
       '</div></div>' +
-    '<div class="card" style="padding:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="color:var(--gold);font-size:10px;font-weight:700;letter-spacing:1.5px">NEXT FREE HOUR</div><div style="color:var(--txt);font-size:12px;font-weight:700">' + pts + '/' + POINTS_PER_HOUR + '</div></div><div class="progress" style="margin:0"><div style="width:' + prog + '%"></div></div><div style="color:var(--muted);font-size:12px;margin-top:8px">' + (freeH > 0 ? '🎁 <b style="color:var(--gold-bright)">' + freeH + ' free hour' + (freeH > 1 ? "s" : "") + '</b>' : 'Earn ' + (POINTS_PER_HOUR - pts) + ' more') + '</div></div>' +
+    '<div class="card" style="padding:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="color:var(--gold);font-size:10px;font-weight:700;letter-spacing:1.5px">NEXT FREE HOUR</div><div style="font-size:12px;font-weight:700">' + pts + '/' + POINTS_PER_HOUR + '</div></div><div class="progress" style="margin:0"><div style="width:' + prog + '%"></div></div><div style="color:var(--muted);font-size:12px;margin-top:8px">' + (freeH > 0 ? '🎁 <b style="color:var(--gold-bright)">' + freeH + ' free hour' + (freeH > 1 ? "s" : "") + '</b>' : 'Earn ' + (POINTS_PER_HOUR - pts) + ' more') + '</div></div>' +
     mem +
     '<div class="sec-label">Quick Actions</div>' +
     '<div class="grid2" style="gap:10px">' +
@@ -297,6 +337,7 @@ R.home = function() {
   '</div></div>';
 };
 
+/* ===================== PROFILE ===================== */
 R.profile = function() {
   var c = curC();
   if (!c) return R.landing();
@@ -318,7 +359,7 @@ R.profile = function() {
     '<div style="text-align:center;margin:14px 0">' + av + photoBtns + '</div>' +
     '<div class="id-card" style="padding:22px"><div class="label">YOUR YONDU NUMBER</div><div class="idnum" style="font-size:32px">' + c.id + '</div></div>' +
     '<div class="pts-hero" style="margin-top:14px"><div class="lbl">REWARD POINTS</div><div class="val">' + pts + '</div><div class="sub">' + (Math.floor(pts / POINTS_PER_HOUR) > 0 ? Math.floor(pts / POINTS_PER_HOUR) + " free hour available" : "Earn more for free hours") + '</div></div>' +
-    '<div class="notice" style="margin-top:14px"><b>📊 Points:</b><br>• ₹' + RR + ' = 1 point<br>• ' + POINTS_PER_HOUR + ' points = 1 free hour<br>• Max ' + POINTS_MAX.toLocaleString() + '</div>' +
+    '<div class="notice" style="margin-top:14px"><b>📊 Points:</b><br>• ₹' + RR + ' = 1 point<br>• ' + POINTS_PER_HOUR + ' points = 1 free hour</div>' +
     '<div class="sec-label">🏆 Badges (' + ub.length + '/' + BADGES.length + ')</div>' +
     '<div class="badge-grid">' + badges + '</div>' +
     '<div class="sec-label">🤝 Refer & Earn</div>' +
@@ -330,13 +371,13 @@ R.profile = function() {
       '<button class="btn green" onclick="shareRef()">📤 Share on WhatsApp</button></div>' +
     '<div class="sec-label">📱 Connect</div>' +
     '<div class="grid2">' +
-      '<a class="card" href="' + getIG() + '" target="_blank" rel="noopener" style="text-align:center;text-decoration:none;color:var(--txt);margin:0;padding:14px"><div style="font-weight:700;font-size:14px;color:var(--gold)">📸 Instagram</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(getIG()) + '" style="width:120px;height:120px;background:#fff;padding:8px;border-radius:10px;margin:10px auto 0;display:block"></a>' +
-      '<a class="card" href="' + getGR() + '" target="_blank" rel="noopener" style="text-align:center;text-decoration:none;color:var(--txt);margin:0;padding:14px"><div style="font-weight:700;font-size:14px;color:var(--gold)">⭐ Google</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(getGR()) + '" style="width:120px;height:120px;background:#fff;padding:8px;border-radius:10px;margin:10px auto 0;display:block"></a>' +
+      '<a class="card" href="' + getIG() + '" target="_blank" style="text-align:center;text-decoration:none;color:var(--txt);margin:0;padding:14px"><div style="font-weight:700;color:var(--gold)">📸 Instagram</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(getIG()) + '" style="width:100px;height:100px;background:#fff;padding:8px;border-radius:10px;margin:10px auto 0;display:block"></a>' +
+      '<a class="card" href="' + getGR() + '" target="_blank" style="text-align:center;text-decoration:none;color:var(--txt);margin:0;padding:14px"><div style="font-weight:700;color:var(--gold)">⭐ Google</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(getGR()) + '" style="width:100px;height:100px;background:#fff;padding:8px;border-radius:10px;margin:10px auto 0;display:block"></a>' +
     '</div>' +
     '<button class="btn dark" style="margin-top:20px" onclick="changePin()">🔒 Change PIN</button>' +
     '<button class="btn dark" style="margin-top:8px" onclick="editName()">✏️ Change Name</button>' +
     '<button class="btn danger" style="margin-top:8px" onclick="signOut()">Sign Out</button>' +
-    '<div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)"><div onclick="tapAdmin()" style="color:var(--muted);font-size:10px;letter-spacing:1.5px;cursor:pointer;user-select:none;padding:8px">YONDU · V1.0</div></div>' +
+    '<div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)"><div onclick="tapAdmin()" style="color:var(--muted);font-size:10px;letter-spacing:1.5px;cursor:pointer;padding:8px">YONDU · V1.0</div></div>' +
   '</div></div>';
 };
 
@@ -361,7 +402,7 @@ window.changePhoto = function() {
 };
 window.removePhoto = function() {
   var c = curC();
-  if (!c || !confirm("Remove profile photo?")) return;
+  if (!c || !confirm("Remove photo?")) return;
   c.profilePic = "";
   var a = CUST.slice();
   var i = a.findIndex(function(x) { return x.id === c.id; });
@@ -406,6 +447,7 @@ window.editName = function() {
   render("profile", {});
 };
 
+/* ===================== BOOK ===================== */
 R.book = function() {
   var c = curC(); if (!c) return R.landing();
   if (!bk) bk = { exp: null, time: null, players: 1 };
@@ -425,11 +467,11 @@ R.book = function() {
       '<div style="font-size:32px;font-weight:800;color:var(--gold-bright)">' + bk.players + '</div>' +
       '<button class="qty-btn plus" style="width:48px;height:48px" onclick="chP(1)">+</button></div>';
   }
-  var cf = e ? '<div style="position:fixed;bottom:80px;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:14px 20px;z-index:50"><button class="btn" style="width:100%" onclick="submitBk()">Request Booking →</button></div>' : "";
+  var cf = e ? '<div style="position:fixed;bottom:80px;left:0;right:0;background:rgba(21,24,33,0.95);backdrop-filter:blur(20px);border-top:1px solid var(--border);padding:14px 20px;z-index:50"><button class="btn" style="width:100%" onclick="submitBk()">Request Booking →</button></div>' : "";
   return '<div class="screen"><div class="wrap" style="padding-bottom:120px">' +
     '<div class="brand"><div class="brand-icon"></div><div class="brand-txt"><div class="g">Jay Shree Ganesha</div><div class="n">Start Booking</div><div class="s">' + c.name + ' · ' + c.id + '</div></div></div>' +
     '<div class="sec-label">01 · Choose Experience</div>' + expCards + dur +
-    '<div class="notice gold" style="margin-top:20px">💡 Payment at counter. Admin will assign your station.</div>' +
+    '<div class="notice gold" style="margin-top:20px">💡 Payment at counter. Admin assigns your station.</div>' +
   '</div></div>' + cf;
 };
 window.pickE = function(id) {
@@ -459,6 +501,7 @@ window.submitBk = function() {
   go("confirm", { id: s.id });
 };
 
+/* ===================== CONFIRM ===================== */
 R.confirm = function(p) {
   var s = getSess(p.id);
   if (!s) return '<div class="screen"><div class="wrap"><h2>Not found</h2></div></div>';
@@ -468,9 +511,11 @@ R.confirm = function(p) {
     '<div class="card" style="text-align:center"><div style="color:var(--gold);font-size:10px;font-weight:700;letter-spacing:2px">YOUR NUMBER</div><div style="font-size:32px;font-weight:800;letter-spacing:4px;color:var(--gold-bright);font-family:\'Courier New\',monospace;margin-top:6px">' + (s.customerId || "----") + '</div></div>' +
     '<div class="card"><div style="font-size:16px;font-weight:700;margin-bottom:8px">' + s.name + '</div><div style="color:var(--muted);font-size:13px;margin-bottom:10px">' + s.items.join(" · ") + '</div><span class="badge pending">⏳ PENDING</span></div>' +
     '<button class="btn dark" onclick="go(\'mybookings\')">My Bookings</button>' +
-    '<button class="btn" style="margin-top:8px" onclick="go(\'book\')">Book Another</button></div></div>';
+    '<button class="btn" style="margin-top:8px" onclick="go(\'book\')">Book Another</button>' +
+  '</div></div>';
 };
 
+/* ===================== MY BOOKINGS ===================== */
 R.mybookings = function() {
   var c = curC(); if (!c) return R.landing();
   var mine = SESS.filter(function(s) { return s.customerId === c.id; });
@@ -492,11 +537,17 @@ R.mybookings = function() {
       }
     }
     var stCol = { pending: "var(--gold-bright)", paid: "var(--cyan)", playing: "var(--cyan)", ended: "var(--muted)" };
-    return '<div class="card click" onclick="go(\'session\',{id:\'' + s.id + '\'})"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><div style="font-size:15px;font-weight:700">' + s.name + '</div><span class="badge" style="background:var(--card2);color:' + (stCol[st] || "var(--muted)") + '">' + st.toUpperCase() + '</span></div><div style="color:var(--muted);font-size:13px;margin-bottom:10px">' + s.items.join(" · ") + '</div>' + (ts ? '<div class="timer-huge ' + cls + '" style="font-size:36px;text-align:left">' + ts + '</div>' : "") + '<div style="font-size:11px;color:var(--muted);font-weight:700">' + s.id + '</div></div>';
+    return '<div class="card click" onclick="go(\'session\',{id:\'' + s.id + '\'})">' +
+      '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><div style="font-size:15px;font-weight:700">' + s.name + '</div>' +
+      '<span class="badge" style="background:var(--card2);color:' + (stCol[st] || "var(--muted)") + '">' + st.toUpperCase() + '</span></div>' +
+      '<div style="color:var(--muted);font-size:13px;margin-bottom:10px">' + s.items.join(" · ") + '</div>' +
+      (ts ? '<div class="timer-huge ' + cls + '" style="font-size:36px;text-align:left">' + ts + '</div>' : "") +
+      '<div style="font-size:11px;color:var(--muted);font-weight:700">' + s.id + '</div></div>';
   }).join("");
   return '<div class="screen"><div class="wrap"><h1>My Bookings</h1>' + cards + '</div></div>';
 };
 
+/* ===================== SNACKS ===================== */
 R.snacks = function() {
   var c = curC(); if (!c) return R.landing();
   var cnt = Object.keys(sc).reduce(function(s, k) { return s + sc[k]; }, 0);
@@ -509,10 +560,10 @@ R.snacks = function() {
       : '<button class="qty-btn" onclick="remS(\'' + a.id + '\')">−</button><div class="qty-num">' + q + '</div><button class="qty-btn plus" onclick="addS(\'' + a.id + '\')">+</button>';
     return '<div class="snack-row"><div class="snack-photo">🍽️</div><div class="snack-info"><div class="snack-name">' + a.name + '</div><div class="snack-sub">₹' + a.price + (a.points_price ? " · " + a.points_price + " pts" : "") + '</div></div><div style="display:flex;align-items:center;gap:6px">' + ctrl + '</div></div>';
   }).join("") : '<div class="empty"><div class="big">🍟</div><div class="msg">NO ITEMS</div></div>';
-  var sticky = cnt ? '<div style="position:fixed;bottom:80px;left:0;right:0;background:var(--card);border-top:2px solid var(--gold);padding:14px 20px;z-index:50;display:flex;gap:12px;align-items:center"><div style="flex:1"><div style="color:var(--muted);font-size:10px;font-weight:700">' + cnt + ' ITEM' + (cnt > 1 ? "S" : "") + '</div><div style="font-size:22px;font-weight:800;color:var(--gold-bright)">₹' + total + '</div><div style="color:var(--gold);font-size:12px">or ' + ptsTotal + ' pts</div></div><button class="btn pink" style="width:auto;padding:14px 24px" onclick="openSC()">Order →</button></div>' : "";
+  var sticky = cnt ? '<div style="position:fixed;bottom:80px;left:0;right:0;background:rgba(21,24,33,0.95);backdrop-filter:blur(20px);border-top:2px solid var(--gold);padding:14px 20px;z-index:50;display:flex;gap:12px;align-items:center"><div style="flex:1"><div style="color:var(--muted);font-size:10px;font-weight:700">' + cnt + ' ITEM' + (cnt > 1 ? "S" : "") + '</div><div style="font-size:22px;font-weight:800;color:var(--gold-bright)">₹' + total + '</div><div style="color:var(--gold);font-size:12px">or ' + ptsTotal + ' pts</div></div><button class="btn pink" style="width:auto;padding:14px 24px" onclick="openSC()">Order →</button></div>' : "";
   return '<div class="screen"><div class="wrap" style="padding-bottom:180px">' +
     '<div class="brand"><div class="brand-icon">🍟</div><div class="brand-txt"><div class="g">Jay Shree Ganesha</div><div class="n">Snacks & Drinks</div><div class="s">PAY AT COUNTER</div></div></div>' +
-    '<div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;margin-bottom:14px"><div><div style="color:var(--gold);font-size:10px;font-weight:700;letter-spacing:1.5px">YOUR POINTS</div><div style="font-size:24px;font-weight:800;color:var(--gold-bright);line-height:1;margin-top:4px">' + c.points + '</div></div></div>' +
+    '<div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;margin-bottom:14px"><div><div style="color:var(--gold);font-size:10px;font-weight:700;letter-spacing:1.5px">YOUR POINTS</div><div style="font-size:24px;font-weight:800;color:var(--gold-bright);margin-top:4px">' + c.points + '</div></div></div>' +
     items + '</div></div>' + sticky;
 };
 window.addS = function(id) { sc[id] = (sc[id] || 0) + 1; render("snacks", {}); };
@@ -541,6 +592,7 @@ window.submitSO = function() {
   go("home");
 };
 
+/* ===================== TOURNAMENTS ===================== */
 R.tournaments = function() {
   var c = curC(); if (!c) return R.landing();
   var open = TOURN.filter(function(t) { return t.status !== "done"; });
@@ -563,8 +615,8 @@ function tCrd(t, dim) {
   var hl = Math.floor((ml % 86400000) / 3600000);
   var cd = t.status === "done" ? "Finished" : t.status === "live" ? "LIVE" : ml <= 0 ? "Soon" : dl > 0 ? dl + "d left" : hl + "h left";
   var header = t.bannerPic
-    ? '<img src="' + t.bannerPic + '" style="width:100%;height:130px;object-fit:cover;display:block"><div style="background:var(--card2);padding:14px 18px;position:relative"><div style="position:absolute;top:10px;right:12px">' + sb2 + '</div><div style="font-size:16px;font-weight:800;color:var(--txt)">' + t.name + '</div><div style="color:var(--cyan);font-size:12px;font-weight:700;margin-top:3px">🎮 ' + t.game + '</div></div>'
-    : '<div style="background:linear-gradient(135deg,#1a1508,#0d0b05);padding:18px;position:relative"><div style="position:absolute;top:12px;right:12px">' + sb2 + '</div><div style="font-size:38px">' + (t.banner || "🏆") + '</div><div style="font-size:18px;font-weight:800;margin-top:8px;color:var(--txt)">' + t.name + '</div><div style="color:var(--cyan);font-size:13px;font-weight:700;margin-top:4px">🎮 ' + t.game + '</div></div>';
+    ? '<img src="' + t.bannerPic + '" style="width:100%;height:130px;object-fit:cover;display:block"><div style="background:var(--card2);padding:14px 18px;position:relative"><div style="position:absolute;top:10px;right:12px">' + sb2 + '</div><div style="font-size:16px;font-weight:800">' + t.name + '</div><div style="color:var(--cyan);font-size:12px;font-weight:700;margin-top:3px">🎮 ' + t.game + '</div></div>'
+    : '<div style="background:linear-gradient(135deg,#1a1508,#0d0b05);padding:18px;position:relative"><div style="position:absolute;top:12px;right:12px">' + sb2 + '</div><div style="font-size:38px">' + (t.banner || "🏆") + '</div><div style="font-size:18px;font-weight:800;margin-top:8px">' + t.name + '</div><div style="color:var(--cyan);font-size:13px;font-weight:700;margin-top:4px">🎮 ' + t.game + '</div></div>';
   return '<div class="t-card" onclick="go(\'detail\',{id:\'' + t.id + '\'})">' + header +
     '<div style="padding:16px 18px 18px"><div class="grid2" style="margin-bottom:12px">' +
     '<div style="background:var(--card2);padding:10px;border-radius:8px;text-align:center"><div style="font-size:9px;color:var(--muted);font-weight:700">DATE</div><div style="font-size:13px;font-weight:800;margin-top:4px">' + dt.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) + '</div></div>' +
@@ -582,20 +634,20 @@ R.detail = function(p) {
   var c = curC();
   var already = c && players.find(function(pl) { return pl.customerId === c.id; });
   var prizes = [{ med: "🥇", label: "1ST", val: t.prize1 }, { med: "🥈", label: "2ND", val: t.prize2 }, { med: "🥉", label: "3RD", val: t.prize3 }, { med: "4️⃣", label: "4TH", val: t.prize4 }].filter(function(p2) { return p2.val; });
-  var prizeHTML = prizes.length ? '<div class="card" style="background:#1a1508;border:2px solid var(--gold);margin-top:12px"><div style="text-align:center;margin-bottom:14px"><div style="color:var(--gold);font-size:12px;font-weight:800;letter-spacing:2px">🏆 PRIZES</div></div>' + prizes.map(function(p2) { return '<div style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(201,169,97,.08);border-radius:8px;margin-bottom:8px"><div style="font-size:24px">' + p2.med + '</div><div><div style="color:var(--gold);font-size:10px;font-weight:800">' + p2.label + '</div><div style="font-weight:700;color:var(--txt);font-size:14px">' + p2.val + '</div></div></div>'; }).join("") + '</div>' : "";
+  var prizeHTML = prizes.length ? '<div class="card" style="background:#1a1508;border:2px solid var(--gold);margin-top:12px"><div style="text-align:center;margin-bottom:14px"><div style="color:var(--gold);font-size:12px;font-weight:800;letter-spacing:2px">🏆 PRIZES</div></div>' + prizes.map(function(p2) { return '<div style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(201,169,97,.08);border-radius:8px;margin-bottom:8px"><div style="font-size:24px">' + p2.med + '</div><div><div style="color:var(--gold);font-size:10px;font-weight:800">' + p2.label + '</div><div style="font-weight:700;font-size:14px">' + p2.val + '</div></div></div>'; }).join("") + '</div>' : "";
   var playerHTML = !f ? '<div style="text-align:center;padding:24px;color:var(--muted)"><div style="font-size:36px">👤</div><div style="font-weight:700;margin-top:8px">Be the first!</div></div>' : players.map(function(pl, i) {
     var init = (pl.name || "?").charAt(0).toUpperCase();
     var clr = ["#22d3ee", "#ec4899", "#c9a961", "#a78bfa", "#22c55e", "#fb923c"][i % 6];
-    return '<div class="player-pill"><div style="width:36px;height:36px;border-radius:50%;background:' + clr + '22;border:2px solid ' + clr + ';color:' + clr + ';display:flex;align-items:center;justify-content:center;font-weight:800">' + init + '</div><div style="flex:1"><div style="font-weight:700;color:var(--txt)">' + pl.name + '</div></div><span class="badge ' + (pl.paid ? "open" : "cash") + '">' + (pl.paid ? "Paid" : "Pending") + '</span></div>';
+    return '<div class="player-pill"><div style="width:36px;height:36px;border-radius:50%;background:' + clr + '22;border:2px solid ' + clr + ';color:' + clr + ';display:flex;align-items:center;justify-content:center;font-weight:800">' + init + '</div><div style="flex:1"><div style="font-weight:700">' + pl.name + '</div></div><span class="badge ' + (pl.paid ? "open" : "cash") + '">' + (pl.paid ? "Paid" : "Pending") + '</span></div>';
   }).join("");
   var action = "";
   if (t.status !== "done") {
-    if (!curC()) action = '<div style="position:fixed;bottom:80px;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:14px 20px;z-index:50"><button class="btn" style="width:100%" onclick="go(\'landing\')">Sign up to Register →</button></div>';
-    else if (already) action = '<div style="position:fixed;bottom:80px;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:16px 20px;z-index:50"><div style="text-align:center;color:var(--gold-bright);font-weight:800">✅ Registered — #' + already.id + '</div></div>';
-    else if (full) action = '<div style="position:fixed;bottom:80px;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:16px 20px;z-index:50"><div style="text-align:center;color:#f87171;font-weight:800">❌ Full</div></div>';
-    else action = '<div style="position:fixed;bottom:80px;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:14px 20px;z-index:50"><button class="btn pink" style="width:100%" onclick="openJ(\'' + t.id + '\')">Register →</button></div>';
+    if (!curC()) action = '<div style="position:fixed;bottom:80px;left:0;right:0;background:rgba(21,24,33,0.95);padding:14px 20px;z-index:50"><button class="btn" style="width:100%" onclick="go(\'landing\')">Sign up to Register →</button></div>';
+    else if (already) action = '<div style="position:fixed;bottom:80px;left:0;right:0;background:rgba(21,24,33,0.95);padding:16px 20px;z-index:50"><div style="text-align:center;color:var(--gold-bright);font-weight:800">✅ Registered — #' + already.id + '</div></div>';
+    else if (full) action = '<div style="position:fixed;bottom:80px;left:0;right:0;background:rgba(21,24,33,0.95);padding:16px 20px;z-index:50"><div style="text-align:center;color:#f87171;font-weight:800">❌ Full</div></div>';
+    else action = '<div style="position:fixed;bottom:80px;left:0;right:0;background:rgba(21,24,33,0.95);padding:14px 20px;z-index:50"><button class="btn pink" style="width:100%" onclick="openJ(\'' + t.id + '\')">Register →</button></div>';
   }
-  return '<div class="screen"><div class="wrap" style="padding-bottom:120px"><a href="javascript:go(\'tournaments\')" style="color:var(--muted);font-weight:600;font-size:13px">← Tournaments</a><div class="t-hero" style="margin-top:12px;padding:0;overflow:hidden;border-radius:12px">' + (t.bannerPic ? '<img src="' + t.bannerPic + '" style="width:100%;height:180px;object-fit:cover;display:block">' : "") + '<div style="padding:28px 20px">' + (!t.bannerPic ? '<div style="font-size:52px">' + (t.banner || "🏆") + '</div>' : "") + '<div class="title">' + t.name + '</div><div class="game">🎮 ' + t.game + '</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px"><div style="background:rgba(201,169,97,.1);padding:10px;border-radius:8px;text-align:center"><div style="font-size:10px;color:var(--gold);font-weight:700">DATE</div><div style="font-size:14px;font-weight:700;color:var(--txt);margin-top:4px">' + dt.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) + '</div></div><div style="background:rgba(34,211,238,.1);padding:10px;border-radius:8px;text-align:center"><div style="font-size:10px;color:var(--cyan);font-weight:700">TIME</div><div style="font-size:14px;font-weight:700;color:var(--txt);margin-top:4px">' + fmtTime(t.time) + '</div></div></div></div></div>' + prizeHTML + '<div class="card"><h2>👥 Players (' + f + '/' + (t.maxPlayers || 16) + ')</h2><div class="progress" style="margin:12px 0"><div style="width:' + Math.round(f / (t.maxPlayers || 16) * 100) + '%"></div></div>' + playerHTML + '</div></div></div>' + action;
+  return '<div class="screen"><div class="wrap" style="padding-bottom:120px"><a href="javascript:go(\'tournaments\')" style="color:var(--muted);font-weight:600;font-size:13px">← Tournaments</a><div class="t-hero" style="margin-top:12px;padding:0;overflow:hidden;border-radius:12px">' + (t.bannerPic ? '<img src="' + t.bannerPic + '" style="width:100%;height:180px;object-fit:cover;display:block">' : "") + '<div style="padding:28px 20px">' + (!t.bannerPic ? '<div style="font-size:52px">' + (t.banner || "🏆") + '</div>' : "") + '<div class="title">' + t.name + '</div><div class="game">🎮 ' + t.game + '</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px"><div style="background:rgba(201,169,97,.1);padding:10px;border-radius:8px;text-align:center"><div style="font-size:10px;color:var(--gold);font-weight:700">DATE</div><div style="font-size:14px;font-weight:700;margin-top:4px">' + dt.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) + '</div></div><div style="background:rgba(34,211,238,.1);padding:10px;border-radius:8px;text-align:center"><div style="font-size:10px;color:var(--cyan);font-weight:700">TIME</div><div style="font-size:14px;font-weight:700;margin-top:4px">' + fmtTime(t.time) + '</div></div></div></div></div>' + prizeHTML + '<div class="card"><h2>👥 Players (' + f + '/' + (t.maxPlayers || 16) + ')</h2><div class="progress" style="margin:12px 0"><div style="width:' + Math.round(f / (t.maxPlayers || 16) * 100) + '%"></div></div>' + playerHTML + '</div></div></div>' + action;
 };
 window.openJ = function(tid) {
   var t = getTid(tid); var c = curC();
@@ -604,7 +656,7 @@ window.openJ = function(tid) {
   if (alr) return alert("❌ Already! Your #: " + alr.id);
   var m = document.createElement("div");
   m.id = "jm"; m.className = "modal";
-  m.innerHTML = '<div class="sheet"><h2>Register · ' + t.name + '</h2><div class="s">' + t.game + '</div><div class="notice gold" style="margin-bottom:14px">✅ As <b>' + c.name + '</b><br>ID: <b style="color:var(--gold-bright)">' + c.id + '</b></div><label>Gamer Tag <span class="opt">(optional)</span></label><input id="jgt" maxlength="20"><label>Team Name <span class="opt">(optional)</span></label><input id="jtm" maxlength="20"><label style="display:flex;align-items:center;gap:10px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--txt);font-weight:600;margin-bottom:12px;cursor:pointer"><input type="checkbox" id="jagree" style="width:auto;margin:0;transform:scale(1.3);accent-color:var(--gold)"><span>I agree to the rules</span></label><button class="btn pink" onclick="submitJ(\'' + tid + '\')">Confirm</button><button class="btn dark" style="margin-top:8px" onclick="document.getElementById(\'jm\').remove()">Cancel</button></div>';
+  m.innerHTML = '<div class="sheet"><h2>Register · ' + t.name + '</h2><div class="s">' + t.game + '</div><div class="notice gold" style="margin-bottom:14px">✅ As <b>' + c.name + '</b><br>ID: <b style="color:var(--gold-bright)">' + c.id + '</b></div><label>Gamer Tag <span class="opt">(optional)</span></label><input id="jgt" maxlength="20"><label>Team Name <span class="opt">(optional)</span></label><input id="jtm" maxlength="20"><label style="display:flex;align-items:center;gap:10px;text-transform:none;font-size:13px;font-weight:600;margin-bottom:12px"><input type="checkbox" id="jagree" style="width:auto;margin:0;transform:scale(1.3);accent-color:var(--gold)"><span>I agree to the rules</span></label><button class="btn pink" onclick="submitJ(\'' + tid + '\')">Confirm</button><button class="btn dark" style="margin-top:8px" onclick="document.getElementById(\'jm\').remove()">Cancel</button></div>';
   document.body.appendChild(m);
 };
 window.submitJ = function(tid) {
@@ -628,8 +680,10 @@ R.ticket = function(p) {
   var t = getTid(p.tid); if (!t) return R.tournaments();
   var pl = (t.players || []).find(function(x) { return x.id === p.pid; });
   if (!pl) return R.tournaments();
-  return '<div class="screen"><div class="wrap" style="max-width:460px"><div class="t-hero" style="border-radius:12px;padding:22px">' + (t.bannerPic ? '<img src="' + t.bannerPic + '" style="width:100%;height:100px;object-fit:cover;border-radius:8px">' : '<div style="font-size:40px">' + (t.banner || "🎫") + '</div>') + '<div style="color:var(--pink);font-size:11px;font-weight:700;letter-spacing:2px;margin-top:8px">OFFICIAL TICKET</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--txt)">' + t.name + '</div></div><div class="id-card" style="margin-top:14px;padding:28px 20px"><div class="label">YOUR NUMBER</div><div class="idnum" style="font-size:70px;letter-spacing:8px">' + pl.id + '</div><div class="hint" style="color:var(--gold-bright);font-weight:700;margin-top:10px">' + pl.name + '</div></div><div class="notice gold">💵 Pay entry at counter</div><button class="btn dark" onclick="go(\'tournaments\')">← Back</button></div></div>';
+  return '<div class="screen"><div class="wrap" style="max-width:460px"><div class="t-hero" style="border-radius:12px;padding:22px">' + (t.bannerPic ? '<img src="' + t.bannerPic + '" style="width:100%;height:100px;object-fit:cover;border-radius:8px">' : '<div style="font-size:40px">' + (t.banner || "🎫") + '</div>') + '<div style="color:var(--pink);font-size:11px;font-weight:700;letter-spacing:2px;margin-top:8px">OFFICIAL TICKET</div><div style="font-size:18px;font-weight:800;margin-top:4px">' + t.name + '</div></div><div class="id-card" style="margin-top:14px;padding:28px 20px"><div class="label">YOUR NUMBER</div><div class="idnum" style="font-size:70px;letter-spacing:8px">' + pl.id + '</div><div class="hint" style="color:var(--gold-bright);font-weight:700;margin-top:10px">' + pl.name + '</div></div><div class="notice gold">💵 Pay entry at counter</div><button class="btn dark" onclick="go(\'tournaments\')">← Back</button></div></div>';
 };
+
+/* ===================== SESSION ===================== */
 R.session = function(p) {
   var s = getSess(p.id); if (!s) return '<div class="screen"><div class="wrap"><h2>Not found</h2></div></div>';
   var playHTML = "";
@@ -653,16 +707,16 @@ R.session.after = function(p) {
     el.textContent = String(Math.floor(l / 60000)).padStart(2, "0") + ":" + String(Math.floor((l % 60000) / 1000)).padStart(2, "0");
     el.className = "timer-huge" + (l < 5 * 60000 ? " over" : l < 15 * 60000 ? " warn" : "");
   };
-  tick();
-  setInterval(tick, 1000);
+  tick(); setInterval(tick, 1000);
 };
 
+/* ===================== LIVE SYNC ===================== */
 function showLiveBadge(msg) {
   var el = document.getElementById("live-badge");
   if (!el) {
     el = document.createElement("div");
     el.id = "live-badge";
-    el.style.cssText = "position:fixed;top:12px;left:50%;transform:translateX(-50%) translateY(-80px);background:linear-gradient(135deg,#c9a961,#e8d5a3);color:#111;padding:10px 20px;border-radius:20px;font-size:12px;font-weight:800;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.6);transition:transform .4s cubic-bezier(.2,.9,.3,1.3)";
+    el.style.cssText = "position:fixed;top:12px;left:50%;transform:translateX(-50%) translateY(-80px);background:linear-gradient(135deg,#c9a961,#e8d5a3);color:#111;padding:10px 20px;border-radius:20px;font-size:12px;font-weight:800;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.6);transition:transform .4s";
     document.body.appendChild(el);
   }
   el.textContent = msg;
@@ -687,12 +741,12 @@ function rtRefresh() {
     }
     if (wasTyping || wasInModal) return;
     if (curR) render(curR, {});
-  }).catch(function(e) { console.error("Live refresh failed:", e); });
+  }).catch(function(e) { console.error(e); });
 }
 function setupRealtime() {
   if (!sb) return;
   try { sb.removeAllChannels(); } catch(e) {}
-  ["customers", "sessions", "tournaments", "requests", "addons"].forEach(function(t) {
+  ["customers", "sessions", "tournaments", "requests", "addons", "settings"].forEach(function(t) {
     try {
       sb.channel("live-" + t).on("postgres_changes", { event: "*", schema: "public", table: t }, function(payload) {
         if (payload.eventType === "UPDATE" && t === "customers") {
@@ -715,7 +769,6 @@ function setupRealtime() {
           if (me3 && rr.customer_id === me3.id) {
             if (rr.status === "approved") showLiveBadge("✅ Order approved!");
             else if (rr.status === "done") showLiveBadge("🍟 Order delivered!");
-            else if (rr.status === "rejected") showLiveBadge("❌ Order rejected");
           }
         }
         rtRefresh();
@@ -724,13 +777,15 @@ function setupRealtime() {
   });
 }
 
-(function() {
+/* ===================== STARTUP ===================== */
+document.getElementById("app").innerHTML = '<div class="screen"><div class="wrap"><div class="empty"><div class="big">⏳</div><div class="msg">LOADING</div></div></div></div>';
+loadAll().then(function() {
   var c = curC();
   if (c) { if (!c.activated) go("pending"); else go("home"); }
   else if (isGuest()) go("guest_home");
   else go("landing");
-})();
-loadAll().then(function() {
-  if (curR) render(curR, {});
   setupRealtime();
-}).catch(function(e) { console.error("Load failed:", e); });
+}).catch(function(e) {
+  console.error("Load failed:", e);
+  document.getElementById("app").innerHTML = '<div class="screen"><div class="wrap"><div class="empty"><div class="big">❌</div><div class="msg">CONNECTION FAILED</div><p style="color:var(--muted);margin-top:10px;font-size:13px">Check internet & refresh</p><button class="btn" style="max-width:280px;margin:20px auto 0" onclick="location.reload()">Retry</button></div></div></div>';
+});
