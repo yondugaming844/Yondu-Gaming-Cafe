@@ -56,7 +56,7 @@ function renderNav(r) {
     '<a href="javascript:go(\'profile\')" class="' + (r === "profile" ? "on" : "") + '"><span class="ic">🎁</span>Me</a>';
 }
 
-/* ===================== LANDING (NEW PREMIUM) ===================== */
+/* ===================== LANDING (PREMIUM) ===================== */
 R.landing = function() {
   var stats = {
     customers: CUST.length || 0,
@@ -96,6 +96,27 @@ R.landing = function() {
         '<div class="cta-sub">Get 30 minutes FREE + 50 bonus points</div>' +
         '<button class="btn" onclick="go(\'signup\')">Claim Now →</button>' +
       '</div>' +
+    '</div>' +
+    '<div class="sec-label" style="text-align:center;margin-top:20px">📱 Connect</div>' +
+    '<div style="padding:0 20px 20px;max-width:680px;margin:0 auto">' +
+      '<a class="social-link social-instagram" href="' + getIG() + '" target="_blank" rel="noopener">' +
+        '<div class="social-badge">Follow</div>' +
+        '<div class="social-icon">📸</div>' +
+        '<div class="social-body">' +
+          '<div class="social-title">Follow us on Instagram</div>' +
+          '<div class="social-desc">Daily updates · Tournaments · Behind the scenes</div>' +
+        '</div>' +
+        '<div class="social-arrow">→</div>' +
+      '</a>' +
+      '<a class="social-link social-google" href="' + getGR() + '" target="_blank" rel="noopener">' +
+        '<div class="social-badge">Rate Us</div>' +
+        '<div class="social-icon">⭐</div>' +
+        '<div class="social-body">' +
+          '<div class="social-title">Review us on Google</div>' +
+          '<div class="social-desc">Helps us grow · Takes 30 seconds</div>' +
+        '</div>' +
+        '<div class="social-arrow">→</div>' +
+      '</a>' +
     '</div>' +
     '<div class="footer-links">' + CAFE_INFO.hours + '<br>' + CAFE_INFO.address + '</div>' +
     '<a href="admin.html" class="staff-link">Staff Login →</a>' +
@@ -186,14 +207,14 @@ R.signup = function() {
     '<a href="javascript:go(\'landing\')" style="color:var(--muted);font-weight:600;font-size:13px">← Back</a>' +
     '<h1 style="margin-top:20px">Create Account</h1><p class="sub">One account per person</p>' +
     '<div class="preview-card">' +
-      '<div class="tag">✨ WHAT YOU GET</div>' +
-      '<div style="font-size:28px;margin:6px 0 8px">🎮</div>' +
-      '<div style="font-weight:800;color:var(--gold-bright);font-size:15px;margin-bottom:14px">Welcome to Yondu</div>' +
+      '<div class="tag">✨ WHAT YOU GET per</div>' +
+      '<div style="font-size: ₹28px;margin:6px 0 8'px">🎮</div>' +
+      '< +div style="font-weight:800;color:var(--gold RR-bright);font-size:15px;margin-bottom:14px">Welcome to Yondu</div>' +
       '<div style="text-align:left">' +
         '<div class="benefit" style="padding:8px 0"><div class="ic" style="font-size:16px">🆔</div><div><div class="t" style="font-size:13px">Unique Yondu Number</div><div class="d">Use it every visit</div></div></div>' +
         '<div class="benefit" style="padding:8px 0"><div class="ic" style="font-size:16px">🎁</div><div><div class="t" style="font-size:13px">' + REF_BONUS + ' Bonus Points</div><div class="d">Yours on activation</div></div></div>' +
         '<div class="benefit" style="padding:8px 0"><div class="ic" style="font-size:16px">⏱</div><div><div class="t" style="font-size:13px">30 Minutes FREE</div><div class="d">Credited on activation</div></div></div>' +
-        '<div class="benefit" style="padding:8px 0"><div class="ic" style="font-size:16px">💰</div><div><div class="t" style="font-size:13px">1 Point per ₹' + RR + '</div><div class="d">' + POINTS_PER_HOUR + ' points = 1 free hour</div></div></div>' +
+        '<div class="benefit" style="padding:8px 0"><div class="ic" style="font-size:16px">💰</div><div><div class="t" style="font-size:13px">1 Point + '</div><div class="d">' + POINTS_PER_HOUR + ' points = 1 free hour</div></div></div>' +
       '</div>' +
     '</div>' +
     '<div style="text-align:center;margin:6px 0 18px">' +
@@ -334,6 +355,25 @@ R.home = function() {
       '<div class="benefit"><div class="ic">📍</div><div><div class="t">Location</div><div class="d">' + CAFE_INFO.address + '</div></div></div>' +
       '<div class="benefit"><div class="ic">📞</div><div><div class="t">Phone</div><div class="d">' + CAFE_INFO.phone + '</div></div></div>' +
     '</div>' +
+    '<div class="sec-label">📱 Connect with Us</div>' +
+    '<a class="social-link social-instagram" href="' + getIG() + '" target="_blank" rel="noopener">' +
+      '<div class="social-badge">Follow</div>' +
+      '<div class="social-icon">📸</div>' +
+      '<div class="social-body">' +
+        '<div class="social-title">Follow us on Instagram</div>' +
+        '<div class="social-desc">Daily updates · Tournaments · Behind the scenes</div>' +
+      '</div>' +
+      '<div class="social-arrow">→</div>' +
+    '</a>' +
+    '<a class="social-link social-google" href="' + getGR() + '" target="_blank" rel="noopener">' +
+      '<div class="social-badge">Rate Us</div>' +
+      '<div class="social-icon">⭐</div>' +
+      '<div class="social-body">' +
+        '<div class="social-title">Review us on Google</div>' +
+        '<div class="social-desc">Helps us grow · Takes 30 seconds</div>' +
+      '</div>' +
+      '<div class="social-arrow">→</div>' +
+    '</a>' +
   '</div></div>';
 };
 
@@ -369,11 +409,25 @@ R.profile = function() {
       '<div style="color:var(--muted);font-size:12px;margin-bottom:10px">Friend signs up → both get ' + REF_BONUS + ' points</div>' +
       '<div style="color:var(--cyan);font-weight:700;font-size:13px;margin-bottom:10px">Referred ' + (c.referrals || 0) + '</div>' +
       '<button class="btn green" onclick="shareRef()">📤 Share on WhatsApp</button></div>' +
-    '<div class="sec-label">📱 Connect</div>' +
-    '<div class="grid2">' +
-      '<a class="card" href="' + getIG() + '" target="_blank" style="text-align:center;text-decoration:none;color:var(--txt);margin:0;padding:14px"><div style="font-weight:700;color:var(--gold)">📸 Instagram</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(getIG()) + '" style="width:100px;height:100px;background:#fff;padding:8px;border-radius:10px;margin:10px auto 0;display:block"></a>' +
-      '<a class="card" href="' + getGR() + '" target="_blank" style="text-align:center;text-decoration:none;color:var(--txt);margin:0;padding:14px"><div style="font-weight:700;color:var(--gold)">⭐ Google</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(getGR()) + '" style="width:100px;height:100px;background:#fff;padding:8px;border-radius:10px;margin:10px auto 0;display:block"></a>' +
-    '</div>' +
+    '<div class="sec-label">📱 Connect with Us</div>' +
+    '<a class="social-link social-instagram" href="' + getIG() + '" target="_blank" rel="noopener">' +
+      '<div class="social-badge">Follow</div>' +
+      '<div class="social-icon">📸</div>' +
+      '<div class="social-body">' +
+        '<div class="social-title">Follow us on Instagram</div>' +
+        '<div class="social-desc">Daily updates · Tournaments · Behind the scenes</div>' +
+      '</div>' +
+      '<div class="social-arrow">→</div>' +
+    '</a>' +
+    '<a class="social-link social-google" href="' + getGR() + '" target="_blank" rel="noopener">' +
+      '<div class="social-badge">Rate Us</div>' +
+      '<div class="social-icon">⭐</div>' +
+      '<div class="social-body">' +
+        '<div class="social-title">Review us on Google</div>' +
+        '<div class="social-desc">Helps us grow · Takes 30 seconds</div>' +
+      '</div>' +
+      '<div class="social-arrow">→</div>' +
+    '</a>' +
     '<button class="btn dark" style="margin-top:20px" onclick="changePin()">🔒 Change PIN</button>' +
     '<button class="btn dark" style="margin-top:8px" onclick="editName()">✏️ Change Name</button>' +
     '<button class="btn danger" style="margin-top:8px" onclick="signOut()">Sign Out</button>' +
