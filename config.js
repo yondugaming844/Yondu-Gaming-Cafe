@@ -180,7 +180,7 @@ function awardBday(c) { c.points = Math.min(POINTS_MAX, (c.points || 0) + BDAY_B
 
 function defaultSettings() {
   return {
-    cafe: { hours: "Mon-Sun · 10:00 AM - 11:00 PM", address: "Vadodara, Gujarat", phone: "+91 90000 00000" },
+    cafe: { hours: "Mon-Sun · 10:00 AM - 12:00 AM", address: "Vadodara, Gujarat", phone: "+91 90000 00000" },
     loyalty: { RR: 20, POINTS_PER_HOUR: 1000, REF_BONUS: 50, BDAY_BONUS: 100 },
     experiences: JSON.parse(JSON.stringify(EXP_DEF))
   };
