@@ -1,4 +1,4 @@
-/* YONDU CONFIG — edit this file to change prices, phone, snacks */
+/* YONDU CONFIG — edit phone/prices here OR live via Admin → Settings */
 
 var SB_URL = "https://murcilacjeoemdgrfwpl.supabase.co";
 var SB_KEY = "sb_publishable_7exYurU_LMovVH8jHysPmg_YaY76aci";
@@ -8,7 +8,7 @@ try { sb = window.supabase.createClient(SB_URL, SB_KEY); } catch(e) { console.er
 var RR = 20, POINTS_MAX = 10000, POINTS_PER_HOUR = 1000, REF_BONUS = 50, BDAY_BONUS = 100;
 var YEARS_MS = 365 * 24 * 60 * 60 * 1000;
 
-/* ⚠️ CHANGE YOUR PHONE NUMBER HERE */
+/* ⚠️ Default phone — but staff can also edit live via Admin → Settings */
 var CAFE_PHONE = "+91 90000 00000";
 
 var STA_DEF = [
@@ -47,7 +47,9 @@ var CAFE_INFO = {
 };
 
 var CUST = [], SESS = [], TOURN = [], REQ = [], STA = [], EXP = [], ADD = [], ADMINS = [];
+var SETTINGS = null;
 
+/* ---------- Helpers ---------- */
 function hashPin(p) {
   var h = 5381, s = "ysalt" + p + "ysalt";
   for (var i = 0; i < s.length; i++) h = ((h << 5) + h) + s.charCodeAt(i);
@@ -87,10 +89,6 @@ function fmtTime(t) {
   var h12 = hh % 12 || 12;
   return h12 + ":" + p[1] + " " + ap;
 }
-function fmtDateTime(ts) {
-  if (!ts) return "--";
-  return new Date(Number(ts)).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-}
 function money(n) { return "₹" + (Number(n) || 0).toLocaleString("en-IN"); }
 function esc(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, function(c) {
@@ -106,6 +104,7 @@ var DB = {
   del: function(k) { try { localStorage.removeItem(k); } catch(e) {} }
 };
 
+/* ---------- Normalizers ---------- */
 function normC(r) {
   return { id: r.id, name: r.name, phone: r.phone || "", birthday: r.birthday || "",
     pinHash: r.pin_hash, points: r.points || 0, pointsSpent: r.points_spent || 0,
@@ -200,6 +199,7 @@ function denormA(a) {
   return { username: a.username, pass_hash: a.passHash, role: a.role || "admin", perms: JSON.stringify(a.perms || []), created_at: a.createdAt || Date.now() };
 }
 
+/* ---------- Sync + Load ---------- */
 function syncTable(table, newArr, oldArr, denorm) {
   if (!sb) return;
   var oldMap = {};
@@ -225,7 +225,8 @@ function loadAll() {
     sb.from("experiences").select("*"),
     sb.from("addons").select("*"),
     sb.from("requests").select("*").order("created_at", { ascending: false }).limit(300),
-    sb.from("admins").select("*")
+    sb.from("admins").select("*"),
+    sb.from("settings").select("*").eq("id", "main").maybeSingle()
   ]).then(function(results) {
     CUST = (results[0].data || []).map(normC);
     SESS = (results[1].data || []).map(normS);
@@ -238,8 +239,20 @@ function loadAll() {
     REQ = (results[6].data || []).map(normReq);
     ADMINS = (results[7].data || []).map(normA);
     if (!STA.length) STA = STA_DEF.slice();
-    if (!EXP.length) EXP = EXP_DEF.slice();
     if (!ADD.length) ADD = ADD_DEF.slice();
+
+    var sRow = results[8] && results[8].data;
+    if (sRow && sRow.data && Object.keys(sRow.data).length) {
+      applySettings(sRow.data);
+    } else {
+      var def = defaultSettings();
+      applySettings(def);
+      sb.from("settings").upsert({ id: "main", data: def }).then(function(res) {
+        if (res.error) console.error("Failed to seed settings:", res.error);
+      });
+    }
+
+    if (!EXP.length) EXP = EXP_DEF.slice();
   });
 }
 
@@ -274,6 +287,7 @@ function saveAdmins(arr) {
   }).catch(function(e) { console.error(e); });
 }
 
+/* ---------- IDs + Lookup ---------- */
 function newCID() {
   for (var i = 0; i < 200; i++) {
     var id = String(Math.floor(100000 + Math.random() * 900000));
@@ -291,6 +305,8 @@ function dursOf(id) {
   var e = EXP.find(function(x) { return x.id === id; });
   return e && e.durs ? e.durs : [30, 60, 120, 180];
 }
+
+/* ---------- Expiry + Badges + Birthday ---------- */
 function checkExpiry(c) {
   var now = Date.now(), last = c.lastActivity || c.createdAt;
   if (now - last > YEARS_MS) {
@@ -325,4 +341,51 @@ function awardBday(c) {
   var i = a.findIndex(function(x) { return x.id === c.id; });
   if (i >= 0) a[i] = c;
   saveC(a);
+}
+
+/* ============================================================
+   LIVE SETTINGS — editable from Admin Panel, no code changes needed
+   ============================================================ */
+function defaultSettings() {
+  return {
+    cafe: {
+      hours: "Mon-Sun · 10:00 AM - 11:00 PM",
+      address: "Vadodara, Gujarat",
+      phone: "+91 90000 00000"
+    },
+    loyalty: {
+      RR: 20,
+      POINTS_PER_HOUR: 1000,
+      REF_BONUS: 50,
+      BDAY_BONUS: 100
+    },
+    experiences: JSON.parse(JSON.stringify(EXP_DEF))
+  };
+}
+
+function applySettings(s) {
+  if (!s) return;
+  SETTINGS = s;
+  if (s.cafe) {
+    CAFE_INFO.hours = s.cafe.hours || CAFE_INFO.hours;
+    CAFE_INFO.address = s.cafe.address || CAFE_INFO.address;
+    CAFE_INFO.phone = s.cafe.phone || CAFE_INFO.phone;
+    CAFE_PHONE = CAFE_INFO.phone;
+  }
+  if (s.loyalty) {
+    if (s.loyalty.RR) RR = s.loyalty.RR;
+    if (s.loyalty.POINTS_PER_HOUR) POINTS_PER_HOUR = s.loyalty.POINTS_PER_HOUR;
+    if (s.loyalty.REF_BONUS != null) REF_BONUS = s.loyalty.REF_BONUS;
+    if (s.loyalty.BDAY_BONUS != null) BDAY_BONUS = s.loyalty.BDAY_BONUS;
+  }
+  if (s.experiences && s.experiences.length) {
+    EXP = JSON.parse(JSON.stringify(s.experiences));
+  }
+}
+
+function saveSettings(s) {
+  SETTINGS = s;
+  applySettings(s);
+  if (!sb) return Promise.resolve({ error: null });
+  return sb.from("settings").upsert({ id: "main", data: s });
 }
