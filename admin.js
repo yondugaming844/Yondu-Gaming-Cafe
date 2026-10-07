@@ -374,13 +374,23 @@ R.requests = function() {
   return '<div class="screen"><div class="wrap"><h1 style="font-size:22px">Requests</h1><p class="sub">Waiting for you</p>' + ((!pendingReqs.length && !pendingAct.length) ? '<div class="empty"><div class="big">✓</div><div class="msg">ALL CLEAR</div></div>' : "") + actHTML + reqHTML + '</div></div>';
 };
 window.activateCust = function(cid) {
-  loadAll().then(function() {
-    var c = CUST.find(function(x) { return x.id === cid; }); if (!c) return;
-    c.activated = true; c.points = (c.points || 0) + 50; c.credit = (c.credit || 0) + 30;
-    var arr = CUST.slice(); var i = arr.findIndex(function(x) { return x.id === cid; }); if (i >= 0) arr[i] = c; saveC(arr);
+  var c = CUST.find(function(x) { return x.id === cid; });
+  if (!c) return;
+  var newPoints = (c.points || 0) + 50;
+  var newCredit = (c.credit || 0) + 30;
+  sb.from("customers").update({
+    activated: true,
+    points: newPoints,
+    credit: newCredit
+  }).eq("id", cid).then(function(res) {
+    if (res.error) { toast("❌ " + res.error.message, "error"); console.error(res.error); return; }
+    c.activated = true;
+    c.points = newPoints;
+    c.credit = newCredit;
     toast("✅ " + c.name + " activated", "success");
     render(curR, {});
-  });
+  }).catch(function(e) { toast("❌ " + e.message, "error"); console.error(e); });
+
 };
 window.deleteCust = function(cid) {
   var c = CUST.find(function(x) { return x.id === cid; });
